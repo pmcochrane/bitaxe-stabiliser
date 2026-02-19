@@ -1,0 +1,9 @@
+{
+	"watch": ["src/bitaxe", "src/routes", "src/store", "src/utils"],
+	"ext": "ts",
+	"ignore": ["src/**/*.test.ts", "src/pages", "src/components"],
+	"exec": "ts-node src/index.ts",
+	"env": {
+		"NODE_ENV": "development"
+	}
+}
