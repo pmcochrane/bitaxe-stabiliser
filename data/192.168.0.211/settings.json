@@ -1,9 +1,0 @@
-{
-  "targetAsic": 70,
-  "maxVr": 93,
-  "coreVoltage": 1245,
-  "maxFreq": 924.5,
-  "maxHistoryEntries": 172800,
-  "ip": "192.168.0.211",
-  "hostname": "bitaxe-g1.lan"
-}
