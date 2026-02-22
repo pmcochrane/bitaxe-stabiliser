@@ -234,6 +234,11 @@ export default function Dashboard() {
 						) : (
 							<div className="text-gray-500">No data available</div>
 						)}
+						{current && status?.history && status.history.length >= 50 && status.history.slice(-50).every(h => h.stepDown < 10) && (
+							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
+								⚠️ Cannot attain the desired maximum frequency. Consider lowering this value so that it is holding closer to 0 at the ambient room temp. This may also allow you to reduce the core voltage increasing the efficiency of the device.<br /><br />If it lowers over time, this may indicate a cooling issue with the device.
+							</div>
+						)}
 					</div>
 
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
@@ -272,40 +277,44 @@ export default function Dashboard() {
 
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
-						<div className="flex flex-wrap gap-2 mb-4">
-							<button
-								onClick={() => handleAdjustFreq(1)}
-								className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
-							>
-								Step +1
-							</button>
-							<button
-								onClick={() => handleAdjustFreq(-1)}
-								className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
-							>
-								Step -1
-							</button>
-							<button
-								onClick={() => handleAdjustVoltage(5)}
-								className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
-							>
-								V +
-							</button>
-							<button
-								onClick={() => handleAdjustVoltage(-5)}
-								className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
-							>
-								V -
-							</button>
+						<div className="flex flex-wrap gap-4 mb-4">
+							<div className="flex flex-col gap-2">
+								<button
+									onClick={() => handleAdjustFreq(1)}
+									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
+								>
+									Step +
+								</button>
+								<button
+									onClick={() => handleAdjustFreq(-1)}
+									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
+								>
+									Step -
+								</button>
+							</div>
+							<div className="flex flex-col gap-2">
+								<button
+									onClick={() => handleAdjustVoltage(5)}
+									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
+								>
+									Voltage +
+								</button>
+								<button
+									onClick={() => handleAdjustVoltage(-5)}
+									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
+								>
+									Voltage -
+								</button>
+							</div>
 							<button
 								onClick={handleToggleSweep}
-								className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
+								className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 self-start"
 							>
 								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
 							</button>
 							<button
 								onClick={handleResetData}
-								className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90"
+								className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 self-start"
 							>
 								Clear Historical Data
 							</button>
@@ -471,8 +480,8 @@ export default function Dashboard() {
 							</thead>
 							<tbody>
 								{status?.history && status.history.length > 0 ? (
-									[...status.history].reverse().map((h, i) => {
-										const prev = i < status.history.length - 1 ? status.history[status.history.length - 2 - i] : null;
+									[...status.history].reverse().slice(0, 10).map((h, i) => {
+										const prev = i < 9 && status.history.length > i + 1 ? [...status.history].reverse()[i + 1] : null;
 										return (
 											<tr key={h.timestamp} className={`border-b dark:border-gray-700 ${i === 0 ? 'bg-yellow-50 dark:bg-yellow-900 font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
 												<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>

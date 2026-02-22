@@ -8,7 +8,7 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 	const router = Router();
 
 	router.get('/status', (req: Request, res: Response) => {
-		const history = store.getLastNHistory(10);
+		const history = store.getLastNHistory(50);
 		const state = monitor.getState();
 		const settings = monitor.getSettings();
 		const events = store.getEvents();
