@@ -45,6 +45,7 @@ export class MonitorService {
 
 		this.state = {
 			running: false,
+			stabilise: true,
 			sweepMode: false,
 			stepDown: this.stepDownDefault,
 			stepUpCounter: this.stepUpEveryXPasses,
@@ -98,6 +99,16 @@ export class MonitorService {
 			clearTimeout(this.intervalId);
 			this.intervalId = null;
 		}
+	}
+
+	stabiliseOn(): void {
+		this.state.stabilise = true;
+		logMonitor('Stabilise enabled');
+	}
+
+	stabiliseOff(): void {
+		this.state.stabilise = false;
+		logMonitor('Stabilise disabled');
 	}
 
 	adjustFrequency(delta: number): void {
@@ -175,8 +186,6 @@ export class MonitorService {
 	}
 
 	private runLoop(): void {
-		if (!this.state.running) return;
-
 		this.iteration++;
 
 		this.client.getSystemInfo().then((info) => {
@@ -189,7 +198,9 @@ export class MonitorService {
 			const status = this.processReading(info);
 			if (status) {
 				this.store.addHistoryEntry(status);
-				this.evaluateAndAdjust(status);
+				if (this.state.running) {
+					this.evaluateAndAdjust(status);
+				}
 			}
 
 			this.scheduleNext();
@@ -320,9 +331,20 @@ export class MonitorService {
 		const fmaxAsic = this.settings.targetAsic + 0.25;
 		const fminAsic = this.settings.targetAsic - 0.25;
 		const fmaxVr = this.settings.maxVr;
+		const emergencyOverheat = this.settings.targetAsic + 2;
 
 		if (status.overheatMode) {
 			this.changeMessage='Overheat mode detected!';
+		}
+
+		if (!this.state.stabilise) {
+			if (status.temp > emergencyOverheat) {
+				const oldStepDown = this.state.stepDown;
+				this.state.stepDown--;
+				this.changeMessage=`Emergency cooling (stabilise off): temp ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C, slowing down: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+				this.applyChange = true;
+			}
+			return;
 		}
 
 		if (status.avgVrTemp > fmaxVr && this.autoAdjustFreq) {

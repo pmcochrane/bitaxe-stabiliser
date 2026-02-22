@@ -1,5 +1,6 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import { BitaxeSystemInfo } from './types';
+import { logClient } from '../utils/logger';
 
 export class BitaxeClient {
 	private client: AxiosInstance;
@@ -46,9 +47,46 @@ export class BitaxeClient {
 				fanRpm: data.fanRpm || 0,
 			};
 		} catch (error) {
-			console.error(`Failed to get system info from ${this.ip}:`, error);
+			this.logConnectionError(error);
 			return null;
 		}
+	}
+
+	private logConnectionError(error: unknown): void {
+		if (axios.isAxiosError(error)) {
+			const axiosError = error as AxiosError;
+			const hasNetwork = this.checkNetworkConnectivity();
+			
+			if (axiosError.code === 'ECONNABORTED') {
+				logClient(`Connection to ${this.ip} timed out. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			} else if (axiosError.code === 'ECONNREFUSED') {
+				logClient(`Connection refused by ${this.ip}. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			} else if (axiosError.code === 'ENOTFOUND') {
+				logClient(`DNS lookup failed for ${this.ip}. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			} else if (axiosError.code === 'ETIMEDOUT') {
+				logClient(`Connection timed out to ${this.ip}. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			} else if (axiosError.code === 'EHOSTUNREACH') {
+				logClient(`Host unreachable ${this.ip}. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			} else {
+				logClient(`Failed to connect to ${this.ip}: ${axiosError.message}. Server network: ${hasNetwork ? 'OK' : 'NO NETWORK'}`);
+			}
+		} else {
+			logClient(`Unknown error connecting to ${this.ip}: ${error}`);
+		}
+	}
+
+	private checkNetworkConnectivity(): boolean {
+		const { networkInterfaces } = require('os');
+		const nets = networkInterfaces();
+		
+		for (const name of Object.keys(nets)) {
+			for (const net of nets[name] || []) {
+				if (net.family === 'IPv4' && !net.internal) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	async setSystemSettings(frequency: number, coreVoltage: number): Promise<boolean> {
@@ -59,7 +97,7 @@ export class BitaxeClient {
 			});
 			return true;
 		} catch (error) {
-			console.error(`Failed to set system settings on ${this.ip}:`, error);
+			logClient(`Failed to set system settings on ${this.ip}: ${error}`);
 			return false;
 		}
 	}

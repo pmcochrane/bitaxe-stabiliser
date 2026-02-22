@@ -17,6 +17,7 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 		res.json({
 			running: state.running,
+			stabilise: state.stabilise,
 			sweepMode: state.sweepMode,
 			stepDown: state.stepDown,
 			settings,
@@ -51,6 +52,14 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 			case 'stop':
 				monitor.stop();
 				logApi('Monitor stopped');
+				break;
+			case 'stabiliseOn':
+				monitor.stabiliseOn();
+				logApi('Stabilise enabled');
+				break;
+			case 'stabiliseOff':
+				monitor.stabiliseOff();
+				logApi('Stabilise disabled');
 				break;
 			case 'adjustFreq':
 				monitor.adjustFrequency(command.value || 1);

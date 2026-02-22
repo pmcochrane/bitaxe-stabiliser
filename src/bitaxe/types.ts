@@ -88,12 +88,13 @@ export interface HashrangeEntry {
 }
 
 export interface ControlCommand {
-	action: 'start' | 'stop' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
+	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
 	value?: number;
 }
 
 export interface MonitorState {
 	running: boolean;
+	stabilise: boolean;
 	sweepMode: boolean;
 	stepDown: number;
 	stepUpCounter: number;

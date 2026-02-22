@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 import { MonitorService } from './bitaxe';
 import { DataStore } from './store';
 import { createApiRouter } from './routes';
@@ -38,45 +39,87 @@ const store = new DataStore(
 	HISTORY_LIMIT
 );
 
-const settings = store.getSettings();
-if (BITAXE_IP) {
-	settings.ip = BITAXE_IP;
-	settings.hostname = BITAXE_HOSTNAME;
-	if (TARGET_ASIC !== undefined) settings.targetAsic = TARGET_ASIC;
-	if (MAX_VR !== undefined) settings.maxVr = MAX_VR;
-	if (CORE_VOLTAGE !== undefined) settings.coreVoltage = CORE_VOLTAGE;
-	if (MAX_FREQ !== undefined) settings.maxFreq = MAX_FREQ;
-	store.saveSettings(settings);
+async function getBitaxeSettings(): Promise<{ coreVoltage: number; frequency: number } | null> {
+	try {
+		const response = await axios.get(`http://${BITAXE_IP}/api/system/info`, { timeout: 5000 });
+		const data = response.data;
+		return {
+			coreVoltage: data.coreVoltage || 1245,
+			frequency: data.frequency || 924.5,
+		};
+	} catch (error) {
+		logIndex(`Failed to fetch initial settings from Bitaxe: ${error}`);
+		return null;
+	}
 }
 
-const monitor = new MonitorService(settings, store);
-
-const app = express();
-app.use(express.json());
-
-app.use('/api', createApiRouter(monitor, store));
-
-const isDev = process.env.NODE_ENV !== 'production';
-
-if (!isDev) {
-	app.use(express.static('public'));
-
-	app.get('*', (req, res) => {
-		if (!req.path.startsWith('/api')) {
-			res.sendFile(path.join(__dirname, '../public/index.html'));
+async function initializeSettings() {
+	const settings = store.getSettings();
+	
+	if (BITAXE_IP) {
+		settings.ip = BITAXE_IP;
+		settings.hostname = BITAXE_HOSTNAME;
+		
+		if (TARGET_ASIC !== undefined) {
+			settings.targetAsic = TARGET_ASIC;
 		}
-	});
+		if (MAX_VR !== undefined) {
+			settings.maxVr = MAX_VR;
+		}
+		
+		if (CORE_VOLTAGE === undefined || MAX_FREQ === undefined) {
+			const bitaxeSettings = await getBitaxeSettings();
+			if (bitaxeSettings) {
+				if (CORE_VOLTAGE === undefined) {
+					settings.coreVoltage = bitaxeSettings.coreVoltage;
+					logIndex(`Using Bitaxe coreVoltage: ${bitaxeSettings.coreVoltage}`);
+				}
+				if (MAX_FREQ === undefined) {
+					settings.maxFreq = bitaxeSettings.frequency;
+					logIndex(`Using Bitaxe maxFreq: ${bitaxeSettings.frequency}`);
+				}
+			}
+		} else {
+			settings.coreVoltage = CORE_VOLTAGE;
+			settings.maxFreq = MAX_FREQ;
+		}
+		
+		store.saveSettings(settings);
+	}
+	
+	return settings;
 }
+
+async function main() {
+	const settings = await initializeSettings();
+	const monitor = new MonitorService(settings, store);
+
+	const app = express();
+	app.use(express.json());
+
+	app.use('/api', createApiRouter(monitor, store));
+
+	const isDev = process.env.NODE_ENV !== 'production';
+
+	if (!isDev) {
+		app.use(express.static('public'));
+
+		app.get('*', (req, res) => {
+			if (!req.path.startsWith('/api')) {
+				res.sendFile(path.join(__dirname, '../public/index.html'));
+			}
+		});
+	}
 
 	process.on('SIGINT', () => {
-		logIndex('[SIGINT] Shutting down...');
+		logIndex('Shutting down...');
 		monitor.stop();
 		store.forceSave();
 		process.exit(0);
 	});
 
 	process.on('SIGTERM', () => {
-		logIndex('[SIGTERM] Shutting down...');
+		logIndex('Shutting down...');
 		monitor.stop();
 		store.forceSave();
 		process.exit(0);
@@ -91,3 +134,6 @@ if (!isDev) {
 			logIndex('Monitor started');
 		}, 2000);
 	});
+}
+
+main();

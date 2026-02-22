@@ -3,7 +3,7 @@
   "hostname": "bitaxe-g1.lan",
   "targetAsic": 70,
   "maxVr": 93,
-  "coreVoltage": 1245,
-  "maxFreq": 924.5,
+  "coreVoltage": 1150,
+  "maxFreq": 531.25,
   "maxHistoryEntries": 172800
 }

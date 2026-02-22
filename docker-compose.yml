@@ -10,10 +10,10 @@ services:
       - BITAXE_HOSTNAME=${BITAXE_HOSTNAME:-}
       - PORT=${PORT:-3000}
       - HISTORY_LIMIT=${HISTORY_LIMIT:-172800}
-      - TARGET_ASIC=${TARGET_ASIC:-70}
-      - MAX_VR=${MAX_VR:-93}
-      - CORE_VOLTAGE=${CORE_VOLTAGE:-1245}
-      - MAX_FREQ=${MAX_FREQ:-924.5}
+      - TARGET_ASIC=${TARGET_ASIC:-65}
+      - MAX_VR=${MAX_VR:-80}
+      - CORE_VOLTAGE=${CORE_VOLTAGE:-1150}
+      - MAX_FREQ=${MAX_FREQ:-525.0}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

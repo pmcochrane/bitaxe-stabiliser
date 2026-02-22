@@ -17,3 +17,7 @@ export function logIndex(message: string): void {
 export function logApi(message: string): void {
 	log(`[api.ts] ${message}`);
 }
+
+export function logClient(message: string): void {
+	log(`[client.ts] ${message}`);
+}

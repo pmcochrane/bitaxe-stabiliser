@@ -43,6 +43,7 @@ export interface EventEntry {
 
 export interface StatusResponse {
 	running: boolean;
+	stabilise: boolean;
 	sweepMode: boolean;
 	stepDown: number;
 	settings: Settings;
@@ -59,6 +60,6 @@ export interface HistoryResponse {
 }
 
 export interface ControlCommand {
-	action: 'start' | 'stop' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
+	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
 	value?: number;
 }

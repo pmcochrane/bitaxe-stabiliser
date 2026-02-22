@@ -70,9 +70,9 @@ export default function Dashboard() {
 		return () => clearInterval(interval);
 	}, [fetchGraphData]);
 
-	const handleToggleMonitor = async () => {
+	const handleToggleStabilise = async () => {
 		if (!status) return;
-		await sendControl({ action: status.running ? 'stop' : 'start' });
+		await sendControl({ action: status.stabilise ? 'stabiliseOff' : 'stabiliseOn' });
 		setTimeout(fetchStatus, 100);
 	};
 
@@ -157,12 +157,15 @@ export default function Dashboard() {
 									<div className="text-xl font-bold dark:text-white">{current.power.toFixed(1)} W</div>
 								</div>
 								<div>
-									<div className="text-sm text-gray-500 dark:text-gray-400">Frequency</div>
-									<div className="text-xl font-bold dark:text-white">{current.frequency} MHz</div>
-								</div>
-								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Step</div>
 									<div className="text-xl font-bold dark:text-white">{current.stepDown}</div>
+								</div>
+								<div>
+									<div className="text-sm text-gray-500 dark:text-gray-400">Frequency</div>
+									<div className="text-xl font-bold dark:text-white">{current.frequency} MHz</div>
+									<div className={`text-sm ${current.frequency > settingsForm.maxFreq ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+										{current.frequency > settingsForm.maxFreq ? '↑ +' : '↓ -'}{Math.abs(current.frequency - settingsForm.maxFreq).toFixed(2)} MHz
+									</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Core Voltage</div>
@@ -178,17 +181,43 @@ export default function Dashboard() {
 						)}
 					</div>
 
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-3">
-						<h2 className="text-lg font-semibold mb-4 dark:text-white">Controls & Settings</h2>
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
+						<h2 className="text-lg font-semibold mb-4 dark:text-white">Stabiliser {status?.stabilise ? 'ON' : 'OFF'}</h2>
+						<div className="flex flex-col gap-2">
+							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
+								status?.stabilise === true 
+									? 'border-green-500 bg-green-500 text-white' 
+									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+							}`}>
+								<input
+									type="radio"
+									name="stabilise"
+									checked={status?.stabilise === true}
+									onChange={() => status?.stabilise !== true && handleToggleStabilise()}
+									className="hidden"
+								/>
+								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Actively Adjust Temperature</span>
+							</label>
+							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
+								status?.stabilise === false 
+									? 'border-gray-400 bg-gray-400 text-white' 
+									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+							}`}>
+								<input
+									type="radio"
+									name="stabilise"
+									checked={status?.stabilise === false}
+									onChange={() => status?.stabilise !== false && handleToggleStabilise()}
+									className="hidden"
+								/>
+								<span className={status?.stabilise === false ? 'text-white' : 'dark:text-white'}>No Stabilisation</span>
+							</label>
+						</div>
+					</div>
+
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
+						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
 						<div className="flex flex-wrap gap-2 mb-4">
-							<button
-								onClick={handleToggleMonitor}
-								className={`px-4 py-2 text-white rounded hover:opacity-90 ${
-									status?.running ? 'bg-red-500' : 'bg-green-500'
-								}`}
-							>
-								{status?.running ? 'Stop Monitor' : 'Start Monitor'}
-							</button>
 							<button
 								onClick={() => handleAdjustFreq(1)}
 								className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
@@ -357,10 +386,10 @@ export default function Dashboard() {
 										labelFormatter={(value: any) => new Date(value).toLocaleString()}
 									/>
 									<Legend />
-									<Area yAxisId="hashrate" type="monotone" dataKey={(d: any) => d.hashRate / 1000} name="Hashrate (TH/s)" stroke="#8884d8" fill="#8884d8" strokeWidth={1.5} dot={false} />
-									<Area yAxisId="step"     type="monotone" dataKey="stepDown" name="Step"				fill="#22c55e" strokeWidth={0} />
-									<Line yAxisId="temp"     type="monotone" dataKey="temp"     name="ASIC Temp (°C)" 	stroke="#07470eff" strokeWidth={1.5} dot={false} />
-									<Line yAxisId="temp"     type="monotone" dataKey="vrTemp"   name="VR Temp (°C)" 	stroke="#f97316" strokeWidth={1.5} dot={false} />
+									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d8" fill="#8884d8" strokeWidth={1.5} dot={false} />
+									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e" strokeWidth={0} />
+									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} />
+									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} />
 								</ComposedChart>
 							</ResponsiveContainer>
 						</div>
