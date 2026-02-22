@@ -1,9 +1,0 @@
-{
-  "ip": "192.168.0.211",
-  "hostname": "bitaxe-g1.lan",
-  "targetAsic": 70,
-  "maxVr": 93,
-  "coreVoltage": 1150,
-  "maxFreq": 531.25,
-  "maxHistoryEntries": 172800
-}

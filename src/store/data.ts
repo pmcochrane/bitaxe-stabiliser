@@ -24,10 +24,10 @@ export class DataStore {
 	private maxHistoryEntries: number;
 
 	constructor(
-		settingsFile: string = './settings.json',
-		historyFile: string = './history.json',
-		hashrangeFile: string = './hashrange.json',
-		eventsFile: string = './events.json',
+		settingsFile: string,
+		historyFile: string,
+		hashrangeFile: string,
+		eventsFile: string,
 		maxHistoryEntries: number = 172800
 	) {
 		this.settingsFile = settingsFile;

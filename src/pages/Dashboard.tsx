@@ -3,10 +3,19 @@ import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../serv
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
 
+interface GraphDataEntry {
+	timestamp: string;
+	hashRate: number;
+	temp: number;
+	vrTemp: number;
+	stepDown: number;
+	stepDownFilled: number;
+}
+
 export default function Dashboard() {
 	const [status, setStatus] = useState<StatusResponse | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [graphData, setGraphData] = useState<HistoryEntry[]>([]);
+	const [graphData, setGraphData] = useState<GraphDataEntry[]>([]);
 	const [settingsForm, setSettingsForm] = useState<Settings>({
 		ip: '',
 		hostname: '',
@@ -16,19 +25,23 @@ export default function Dashboard() {
 		maxFreq: 900,
 		maxHistoryEntries: 172800,
 	});
-	const [graphHours, setGraphHours] = useState(24);
+	const [initialLoad, setInitialLoad] = useState(true);
+	const [graphHours, setGraphHours] = useState(2);
 
 	const fetchStatus = useCallback(async () => {
 		try {
 			const data = await getStatus();
 			setStatus(data);
-			setSettingsForm(data.settings);
+			if (initialLoad) {
+				setSettingsForm(data.settings);
+				setInitialLoad(false);
+			}
 		} catch (error) {
 			console.error('Failed to fetch status:', error);
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [initialLoad]);
 
 	useEffect(() => {
 		fetchStatus();
@@ -39,7 +52,15 @@ export default function Dashboard() {
 	const fetchGraphData = useCallback(async () => {
 		try {
 			const data = await getHistoryGraph(graphHours);
-			setGraphData(data);
+			const transformed: GraphDataEntry[] = data.map(d => ({
+				timestamp: d.timestamp,
+				hashRate: d.hashRate / 1000,
+				temp: d.temp,
+				vrTemp: d.vrTemp,
+				stepDown: d.stepDown,
+				stepDownFilled: d.stepDown,
+			}));
+			setGraphData(transformed);
 		} catch (error) {
 			console.error('Failed to fetch graph data:', error);
 		}
@@ -47,7 +68,7 @@ export default function Dashboard() {
 
 	const getHashrateDomain = (): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
-		const values = graphData.map((d) => d.hashRate / 1000);
+		const values = graphData.map((d) => d.hashRate);
 		const min = Math.min(...values);
 		const max = Math.max(...values);
 		const padding = (max - min) * 0.1;
