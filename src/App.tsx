@@ -9,7 +9,8 @@ function App() {
 	const [ip, setIp] = useState('');
 	const [hostname, setHostname] = useState('');
 	const [darkMode, setDarkMode] = useState(() => {
-		return localStorage.getItem('darkMode') === 'true';
+		const stored = localStorage.getItem('darkMode');
+		return stored === null ? true : stored === 'true';
 	});
 
 	useEffect(() => {

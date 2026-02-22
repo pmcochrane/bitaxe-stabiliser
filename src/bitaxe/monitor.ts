@@ -62,6 +62,12 @@ export class MonitorService {
 			this.client.setIp(settings.ip);
 		}
 		this.settings = { ...this.settings, ...settings };
+
+		if (settings.maxFreq !== undefined || settings.coreVoltage !== undefined) {
+			const frequency = settings.maxFreq ?? this.settings.maxFreq;
+			const coreVoltage = settings.coreVoltage ?? this.settings.coreVoltage;
+			this.client.setSystemSettings(frequency, coreVoltage);
+		}
 	}
 
 	getSettings(): Settings {

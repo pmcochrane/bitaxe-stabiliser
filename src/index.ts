@@ -7,6 +7,7 @@ import { MonitorService } from './bitaxe';
 import { DataStore } from './store';
 import { createApiRouter } from './routes';
 import { logIndex } from './utils/logger';
+import { log } from 'console';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -44,8 +45,8 @@ async function getBitaxeSettings(): Promise<{ coreVoltage: number; frequency: nu
 		const response = await axios.get(`http://${BITAXE_IP}/api/system/info`, { timeout: 5000 });
 		const data = response.data;
 		return {
-			coreVoltage: data.coreVoltage || 1245,
-			frequency: data.frequency || 924.5,
+			coreVoltage: data.coreVoltage || undefined,
+			frequency: data.frequency || undefined,
 		};
 	} catch (error) {
 		logIndex(`Failed to fetch initial settings from Bitaxe: ${error}`);
@@ -54,7 +55,30 @@ async function getBitaxeSettings(): Promise<{ coreVoltage: number; frequency: nu
 }
 
 async function initializeSettings() {
-	const settings = store.getSettings();
+	let settings = store.getSettings();
+	if (settings) {
+		logIndex('Loaded settings from file');
+		if (settings.ip) {
+			logIndex(`[settings.json] Bitaxe IP: ${settings.ip}`);
+		}
+		if (settings.hostname) {
+			logIndex(`[settings.json] hostname: ${settings.hostname}`);
+		}	
+		if (settings.coreVoltage) {
+			logIndex(`[settings.json] coreVoltage: ${settings.coreVoltage}`);
+		}
+		if (settings.maxFreq) {
+			logIndex(`[settings.json] maxFreq: ${settings.maxFreq}`);
+		}
+		if (settings.targetAsic) {
+			logIndex(`[settings.json] targetAsic: ${settings.targetAsic}`);
+		}
+		if (settings.maxVr) {
+			logIndex(`[settings.json] maxVr: ${settings.maxVr}`);
+		}
+	} else {
+		logIndex('No settings file found');
+	}
 	
 	if (BITAXE_IP) {
 		settings.ip = BITAXE_IP;
@@ -62,26 +86,34 @@ async function initializeSettings() {
 		
 		if (TARGET_ASIC !== undefined) {
 			settings.targetAsic = TARGET_ASIC;
+			logIndex(`[env] TARGET_ASIC: ${TARGET_ASIC}`);
 		}
 		if (MAX_VR !== undefined) {
 			settings.maxVr = MAX_VR;
+			logIndex(`[env] MAX_VR: ${MAX_VR}`);
 		}
 		
-		if (CORE_VOLTAGE === undefined || MAX_FREQ === undefined) {
+		if (CORE_VOLTAGE !== undefined) {
+			settings.coreVoltage = CORE_VOLTAGE;
+			logIndex(`Using CORE_VOLTAGE from environment: ${CORE_VOLTAGE}`);
+		}
+		if (MAX_FREQ !== undefined) {
+			settings.maxFreq = MAX_FREQ;
+			logIndex(`Using MAX_FREQ from environment: ${MAX_FREQ}`);
+		}
+
+		if (!settings.coreVoltage || !settings.maxFreq) {
 			const bitaxeSettings = await getBitaxeSettings();
 			if (bitaxeSettings) {
-				if (CORE_VOLTAGE === undefined) {
+				if (!settings.coreVoltage) {
 					settings.coreVoltage = bitaxeSettings.coreVoltage;
-					logIndex(`Using Bitaxe coreVoltage: ${bitaxeSettings.coreVoltage}`);
+					logIndex(`Using current Bitaxe setting for coreVoltage: ${bitaxeSettings.coreVoltage}`);
 				}
-				if (MAX_FREQ === undefined) {
+				if (!settings.maxFreq) {
 					settings.maxFreq = bitaxeSettings.frequency;
-					logIndex(`Using Bitaxe maxFreq: ${bitaxeSettings.frequency}`);
+					logIndex(`Using current Bitaxe setting for maxFreq: ${bitaxeSettings.frequency}`);
 				}
 			}
-		} else {
-			settings.coreVoltage = CORE_VOLTAGE;
-			settings.maxFreq = MAX_FREQ;
 		}
 		
 		store.saveSettings(settings);

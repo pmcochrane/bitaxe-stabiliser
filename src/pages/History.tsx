@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getHistory, getSettings } from '../services/api';
 import type { HistoryEntry, HistoryResponse, Settings } from '../types';
+import { Modal, useModal } from '../components/Modal';
 
 export default function History() {
 	const [data, setData] = useState<HistoryEntry[]>([]);
@@ -19,6 +20,7 @@ export default function History() {
 		maxFreq: 900,
 		maxHistoryEntries: 172800,
 	});
+	const { modalState, showAlert, closeModal } = useModal();
 
 	const getTempColor = (temp: number, target: number) => {
 		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
@@ -48,9 +50,9 @@ export default function History() {
 		fetchHistory();
 	}, [page, limit, sort]);
 
-	const handleExportCsv = () => {
+	const handleExportCsv = async () => {
 		if (data.length === 0) {
-			alert('No data to export');
+			await showAlert('No Data', 'There is no data to export.');
 			return;
 		}
 		const headers = [
@@ -89,7 +91,16 @@ export default function History() {
 	};
 
 	return (
-		<div className="container mx-auto p-4">
+		<>
+			<Modal
+				isOpen={modalState.isOpen}
+				title={modalState.title}
+				message={modalState.message}
+				type={modalState.type}
+				onConfirm={modalState.onConfirm}
+				onCancel={closeModal}
+			/>
+			<div className="container mx-auto p-4">
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
 				<div className="flex flex-wrap gap-4 items-end">
 					<div>
@@ -206,5 +217,6 @@ export default function History() {
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }

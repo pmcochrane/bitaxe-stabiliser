@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
+import { Modal, useModal } from '../components/Modal';
 
 interface GraphDataEntry {
 	timestamp: string;
@@ -27,27 +28,8 @@ export default function Dashboard() {
 	});
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [graphHours, setGraphHours] = useState(2);
-
-	const fetchStatus = useCallback(async () => {
-		try {
-			const data = await getStatus();
-			setStatus(data);
-			if (initialLoad) {
-				setSettingsForm(data.settings);
-				setInitialLoad(false);
-			}
-		} catch (error) {
-			console.error('Failed to fetch status:', error);
-		} finally {
-			setLoading(false);
-		}
-	}, [initialLoad]);
-
-	useEffect(() => {
-		fetchStatus();
-		const interval = setInterval(fetchStatus, 3000);
-		return () => clearInterval(interval);
-	}, [fetchStatus]);
+	const [isPageVisible, setIsPageVisible] = useState(true);
+	const { modalState, showConfirm, showAlert, closeModal } = useModal();
 
 	const fetchGraphData = useCallback(async () => {
 		try {
@@ -65,6 +47,43 @@ export default function Dashboard() {
 			console.error('Failed to fetch graph data:', error);
 		}
 	}, [graphHours]);
+
+	const fetchStatus = useCallback(async () => {
+		try {
+			const data = await getStatus();
+			setStatus(data);
+			if (initialLoad) {
+				setSettingsForm(data.settings);
+				setInitialLoad(false);
+			}
+		} catch (error) {
+			console.error('Failed to fetch status:', error);
+		} finally {
+			setLoading(false);
+		}
+	}, [initialLoad]);
+
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			setIsPageVisible(!document.hidden);
+		};
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+	}, []);
+
+	useEffect(() => {
+		fetchGraphData();
+		if (isPageVisible) {
+			const interval = setInterval(fetchGraphData, 5000);
+			return () => clearInterval(interval);
+		}
+	}, [fetchGraphData, isPageVisible]);
+
+	useEffect(() => {
+		fetchStatus();
+		const interval = setInterval(fetchStatus, 3000);
+		return () => clearInterval(interval);
+	}, [fetchStatus]);
 
 	const getHashrateDomain = (): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
@@ -114,16 +133,21 @@ export default function Dashboard() {
 	};
 
 	const handleResetData = async () => {
-		if (confirm('Reset all data for current frequency?')) {
+		const confirmed = await showConfirm(
+			'Clear Historical Data',
+			'Clear all stored data? This will clear the graph data and the history page.'
+		);
+		if (confirmed) {
 			await sendControl({ action: 'resetData' });
 			setTimeout(fetchStatus, 100);
+			setTimeout(fetchGraphData, 200);
 		}
 	};
 
 	const handleSettingsSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		await updateSettings(settingsForm);
-		alert('Settings saved!');
+		await showAlert('Settings Saved', 'Your settings have been saved successfully.');
 		fetchStatus();
 	};
 
@@ -145,6 +169,14 @@ export default function Dashboard() {
 
 	return (
 		<>
+			<Modal
+				isOpen={modalState.isOpen}
+				title={modalState.title}
+				message={modalState.message}
+				type={modalState.type}
+				onConfirm={modalState.onConfirm}
+				onCancel={closeModal}
+			/>
 			<div className="container mx-auto p-4">
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
@@ -163,15 +195,17 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">ASIC Temp</div>
-									<div className={`text-xl font-bold dark:text-white ${getTempColor(current.temp, settingsForm.targetAsic)}`}>
+									<div className={`text-xl font-bold ${getTempColor(current.temp, settingsForm.targetAsic)}`}>
 										{current.temp.toFixed(3)}°C
 									</div>
+									<div className="text-xs text-gray-400">Target: {settingsForm.targetAsic}°C</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">VR Temp</div>
-									<div className={`text-xl font-bold dark:text-white ${getTempColor(current.vrTemp, settingsForm.maxVr)}`}>
+									<div className={`text-xl font-bold ${getTempColor(current.vrTemp, settingsForm.maxVr)}`}>
 										{current.vrTemp}°C
 									</div>
+									<div className="text-xs text-gray-400">Max: {settingsForm.maxVr}°C</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Power</div>
@@ -273,7 +307,7 @@ export default function Dashboard() {
 								onClick={handleResetData}
 								className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90"
 							>
-								Reset Data
+								Clear Historical Data
 							</button>
 						</div>
 
@@ -407,8 +441,8 @@ export default function Dashboard() {
 										labelFormatter={(value: any) => new Date(value).toLocaleString()}
 									/>
 									<Legend />
-									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d8" fill="#8884d8" strokeWidth={1.5} dot={false} />
-									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e" strokeWidth={0} />
+									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} />
+									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} />
 									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} />
 									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} />
 								</ComposedChart>

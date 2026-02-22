@@ -21,3 +21,4 @@ export function logApi(message: string): void {
 export function logClient(message: string): void {
 	log(`[client.ts] ${message}`);
 }
+
