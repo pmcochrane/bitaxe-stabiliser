@@ -38,7 +38,8 @@ export default function Dashboard() {
 
 	useEffect(() => {
 		const observer = new MutationObserver(() => {
-			setIsDarkMode(isDarkMode);
+			const isDark = document.documentElement.classList.contains('dark');
+			setIsDarkMode(isDark);
 		});
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 		return () => observer.disconnect();
@@ -217,18 +218,24 @@ export default function Dashboard() {
 
 	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
-		const values = graphData.map((d) => d.hashRate);
-		const max = Math.max(...values);
+		let max = 0;
+		for (const d of graphData) {
+			if (d.hashRate > max) max = d.hashRate;
+		}
 		const padding = max * 0.1;
 		return [0, max + padding];
 	}, [graphData]);
 
 	const getTempDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 100];
-		const tempValues = graphData.map((d) => d.temp);
-		const vrTempValues = graphData.map((d) => d.vrTemp);
-		const min = Math.min(...tempValues, ...vrTempValues);
-		const max = Math.max(...tempValues, ...vrTempValues);
+		let min = Infinity;
+		let max = -Infinity;
+		for (const d of graphData) {
+			if (d.temp < min) min = d.temp;
+			if (d.temp > max) max = d.temp;
+			if (d.vrTemp < min) min = d.vrTemp;
+			if (d.vrTemp > max) max = d.vrTemp;
+		}
 		const padding = (max - min) * 0.1;
 		return [Math.max(0, min - padding), max + padding];
 	}, [graphData]);
@@ -658,10 +665,10 @@ export default function Dashboard() {
 										labelFormatter={(value: any) => new Date(value).toLocaleString()}
 									/>
 									<Legend />
-									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} />
-									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} />
-									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} />
-									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} />
+									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} />
+									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} />
+									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
+									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
 								</ComposedChart>
 							</ResponsiveContainer>
 						</div>

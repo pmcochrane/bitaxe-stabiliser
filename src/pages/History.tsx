@@ -3,16 +3,16 @@ import { getHistory, getHistoryPages, getSettings } from '../services/api';
 import type { HistoryEntry, HistoryResponse, Settings } from '../types';
 import { Modal, useModal } from '../components/Modal';
 
-const TABLE_ROW_HEIGHT = 40;
-
 export default function History() {
 	const [data, setData] = useState<HistoryEntry[]>([]);
 	const [page, setPage] = useState(1);
-	const [limit, setLimit] = useState(50);
+	const [rowsPerPage, setRowsPerPage] = useState(50);
 	const [sort, setSort] = useState<'asc' | 'desc'>('desc');
 	const [totalPages, setTotalPages] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
+	const [tableHeight, setTableHeight] = useState(0);
+	const [panelHeight, setPanelHeight] = useState(0);
 	const [settings, setSettings] = useState<Settings>({
 		ip: '',
 		hostname: '',
@@ -30,6 +30,8 @@ export default function History() {
 	const [sliderTooltip, setSliderTooltip] = useState<{ page: number; firstTime: string; lastTime: string } | null>(null);
 	const [pageTimestamps, setPageTimestamps] = useState<{ page: number; firstTime: string; lastTime: string }[]>([]);
 	const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const headerRef = useRef<HTMLDivElement>(null);
+	const tableContainerRef = useRef<HTMLDivElement>(null);
 
 	const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newPage = parseInt(e.target.value);
@@ -48,12 +50,15 @@ export default function History() {
 	};
 
 	const getTempColor = (temp: number, target: number) => {
+		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
+		if (temp < target - 1) return 'text-blue-900 dark:text-blue-400';
+		return 'text-green-600 dark:text-green-400';
 	};
 
 	const fetchHistory = async () => {
 		setLoading(true);
 		try {
-			const result: HistoryResponse = await getHistory(page, limit, sort);
+			const result: HistoryResponse = await getHistory(page, rowsPerPage, sort);
 			setData(result.data);
 			setTotalPages(result.totalPages);
 			setTotal(result.total);
@@ -69,30 +74,48 @@ export default function History() {
 	}, []);
 
 	useEffect(() => {
-		getHistoryPages(limit, sort).then(setPageTimestamps).catch(console.error);
-	}, [limit, sort]);
+		getHistoryPages(rowsPerPage, sort).then(setPageTimestamps).catch(console.error);
+	}, [rowsPerPage, sort]);
 
 	useEffect(() => {
 		setSliderPage(page);
 	}, [page]);
 
-	const calculateLimit = useCallback(() => {
-		const headerHeight = 200;
-		const paginationHeight = 60;
-		const availableHeight = window.innerHeight - headerHeight - paginationHeight;
-		return Math.max(10, Math.floor(availableHeight / TABLE_ROW_HEIGHT));
+	const calculateRowsPerPage = useCallback(() => {
+		const tableContainer = tableContainerRef.current;
+		const header = headerRef.current;
+		if (!tableContainer || !header) return { rowsPerPage: 20, tableHeight: 0 };
+
+		const navbar = document.querySelector('nav');
+		const navbarHeight = navbar?.clientHeight || 0;
+		
+		const containerTop = tableContainer.getBoundingClientRect().top;
+		const tableHeight = window.innerHeight - containerTop - navbarHeight;
+		
+		const firstRow = tableContainer.querySelector('tbody tr');
+		const rowHeight = firstRow?.clientHeight || 40;
+		
+		const rowsPerPage = Math.max(10, Math.floor(tableHeight / rowHeight));
+		
+		return { rowsPerPage, tableHeight };
 	}, []);
 
 	useEffect(() => {
-		setLimit(calculateLimit());
-		const handleResize = () => setLimit(calculateLimit());
+		const result = calculateRowsPerPage();
+		setRowsPerPage(result.rowsPerPage);
+		setTableHeight(result.tableHeight);
+		const handleResize = () => {
+			const r = calculateRowsPerPage();
+			setRowsPerPage(r.rowsPerPage);
+			setTableHeight(r.tableHeight);
+		};
 		window.addEventListener('resize', handleResize);
 		return () => window.removeEventListener('resize', handleResize);
-	}, [calculateLimit]);
+	}, [calculateRowsPerPage]);
 
 	useEffect(() => {
 		fetchHistory();
-	}, [page, limit, sort]);
+	}, [page, rowsPerPage, sort]);
 
 	const handleExportCsv = async () => {
 		if (data.length === 0) {
@@ -144,8 +167,8 @@ export default function History() {
 				onConfirm={modalState.onConfirm}
 				onCancel={closeModal}
 			/>
-			<div className="container mx-auto p-4">
-			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
+			<div className="container mx-auto px-4 pt-4 flex flex-col overflow-hidden">
+			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4 flex-shrink-0" ref={headerRef}>
 				<div className="flex flex-wrap gap-4 items-center">
 					<select
 						value={sort}
@@ -194,14 +217,8 @@ export default function History() {
 					<div className="text-sm text-gray-500 dark:text-gray-400 self-center text-center">
 						Page {page} of {totalPages} ({total} entries)
 						<br />
-						Rows per page: {limit}
+						Rows per page: {rowsPerPage}
 					</div>
-					<button
-						onClick={fetchHistory}
-						className="px-4 py-2 bg-blue-500 text-white rounded hover:opacity-90"
-					>
-						Apply
-					</button>
 					<button
 						onClick={handleExportCsv}
 						className="px-4 py-2 bg-green-500 text-white rounded hover:opacity-90"
@@ -211,29 +228,27 @@ export default function History() {
 				</div>
 			</div>
 
-			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-				<div className="overflow-x-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col flex-1 overflow-hidden" style={{ height: tableHeight || undefined }}>
+				<div className="overflow-x-auto flex-1" ref={tableContainerRef}>
 					<table className="w-full text-sm">
 						<thead>
 							<tr className="border-b bg-gray-50 dark:bg-gray-700">
 								<th className="text-left p-2 dark:text-white">Timestamp</th>
 								<th className="text-right p-2 dark:text-white">Hashrate</th>
 								<th className="text-right p-2 dark:text-white">To Expected</th>
-								<th className="text-right p-2 dark:text-white">Avg Hashrate</th>
 								<th className="text-right p-2 dark:text-white">ASIC Temp</th>
-								<th className="text-right p-2 dark:text-white">Avg ASIC</th>
 								<th className="text-right p-2 dark:text-white">VR Temp</th>
 								<th className="text-right p-2 dark:text-white">Core Voltage</th>
-								<th className="text-right p-2 dark:text-white">Power</th>
 								<th className="text-right p-2 dark:text-white">Freq</th>
 								<th className="text-right p-2 dark:text-white">Step</th>
+								<th className="text-right p-2 dark:text-white">Power</th>
 								<th className="text-right p-2 dark:text-white">Efficiency</th>
 							</tr>
 						</thead>
 						<tbody>
 							{loading ? (
 								<tr>
-									<td colSpan={11} className="p-4 text-center dark:text-white">Loading...</td>
+									<td colSpan={10} className="p-4 text-center dark:text-white">Loading...</td>
 								</tr>
 							) : data.length === 0 ? (
 								<tr>
@@ -245,14 +260,12 @@ export default function History() {
 										<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
 										<td className="p-2 text-right dark:text-white">{(h.hashRate / 1000).toFixed(3)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.toExpected, 0)}`}>{h.toExpected.toFixed(1)}%</td>
-										<td className="p-2 text-right dark:text-white">{(h.avgHashRate / 1000).toFixed(3)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.temp, settings.targetAsic)}`}>{h.temp.toFixed(3)}</td>
-										<td className="p-2 text-right dark:text-white">{h.avgAsicTemp.toFixed(1)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.vrTemp, settings.maxVr)}`}>{h.vrTemp}</td>
 										<td className="p-2 text-right dark:text-white">{h.coreVoltage.toFixed(1)}</td>
-										<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
 										<td className="p-2 text-right dark:text-white">{h.frequency}</td>
 										<td className="p-2 text-right dark:text-white">{h.stepDown}</td>
+										<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
 										<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(2)}</td>
 									</tr>
 								))
