@@ -139,6 +139,26 @@ export default function Dashboard() {
 					stepDownFilled: d.stepDown,
 				}));
 
+				const downsampleData = (data: GraphDataEntry[]): GraphDataEntry[] => {
+					if (data.length <= 1) return data;
+					const result: GraphDataEntry[] = [data[0]];
+					const roundHashRate = (v: number) => Math.round(v * 10) / 10;
+					const roundTemp = (v: number) => Math.round(v);
+					for (let i = 1; i < data.length; i++) {
+						const prev = result[result.length - 1];
+						const curr = data[i];
+						if (
+							roundHashRate(curr.hashRate) !== roundHashRate(prev.hashRate) ||
+							roundTemp(curr.temp) !== roundTemp(prev.temp) ||
+							roundTemp(curr.vrTemp) !== roundTemp(prev.vrTemp) ||
+							curr.stepDown !== prev.stepDown
+						) {
+							result.push(curr);
+						}
+					}
+					return result;
+				};
+
 				let mergedData: GraphDataEntry[];
 				if (cachedData.length === 0) {
 					mergedData = transformed;
@@ -151,10 +171,11 @@ export default function Dashboard() {
 				}
 
 				saveGraphDataToCache(mergedData);
-				setGraphData(mergedData);
+				const downsampledData = downsampleData(mergedData);
+				setGraphData(downsampledData);
 				const firstTime = mergedData.length > 0 ? mergedData[0].timestamp : 'none';
 				const lastTime = mergedData.length > 0 ? mergedData[mergedData.length - 1].timestamp : 'none';
-				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
+				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'Downsampled:', downsampledData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch graph data:', error);
 			}
