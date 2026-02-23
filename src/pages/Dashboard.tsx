@@ -110,7 +110,7 @@ export default function Dashboard() {
 			const randomId = Math.floor(Math.random() * 9000) + 1000;
 			const logPrefix = "[useCallback][fetchGraphData]["+randomId+"]";
 			const startTime = performance.now();
-			logUi(logPrefix, 'Fetching graph data for last', graphHours, 'hours...');
+			// logUi(logPrefix, 'Fetching graph data for last', graphHours, 'hours...');
 			try {
 				const cachedData = loadCachedGraphData(graphHours);
 				const isNewTimeRange = prevGraphHours.current !== graphHours;
@@ -139,24 +139,72 @@ export default function Dashboard() {
 					stepDownFilled: d.stepDown,
 				}));
 
-				const downsampleData = (data: GraphDataEntry[]): GraphDataEntry[] => {
-					if (data.length <= 1) return data;
-					const result: GraphDataEntry[] = [data[0]];
-					const roundHashRate = (v: number) => Math.round(v * 10) / 10;
-					const roundTemp = (v: number) => Math.round(v);
-					for (let i = 1; i < data.length; i++) {
-						const prev = result[result.length - 1];
-						const curr = data[i];
-						if (
-							roundHashRate(curr.hashRate) !== roundHashRate(prev.hashRate) ||
-							roundTemp(curr.temp) !== roundTemp(prev.temp) ||
-							roundTemp(curr.vrTemp) !== roundTemp(prev.vrTemp) ||
-							curr.stepDown !== prev.stepDown
-						) {
-							result.push(curr);
+					const downsampleData = (data: GraphDataEntry[], targetPoints: number = 300): GraphDataEntry[] => {
+					if (data.length <= targetPoints) return data;
+					
+					const lttb = (points: GraphDataEntry[], threshold: number): GraphDataEntry[] => {
+						if (!points || points.length <= threshold) return points || [];
+						
+						const sampled: GraphDataEntry[] = [points[0]];
+						const len = points.length;
+						const bucketSize = (len - 1) / (threshold - 1);
+						
+						let a = 0;
+						
+						for (let i = 0; i < threshold - 1; i++) {
+							const bucketStart = Math.floor(i * bucketSize) + 1;
+							const bucketEnd = Math.floor((i + 1) * bucketSize) + 1;
+							
+							if (bucketStart >= len || bucketEnd > len) break;
+							if (a >= len) break;
+							
+							const pointA = points[a];
+							if (!pointA) break;
+							
+							let avgX = 0;
+							let avgY = 0;
+							let count = 0;
+							for (let j = bucketStart; j < bucketEnd && j < len; j++) {
+								if (points[j]) {
+									avgX += j;
+									avgY += points[j].temp;
+									count++;
+								}
+							}
+							if (count === 0) continue;
+							avgX /= count;
+							avgY /= count;
+							
+							let maxArea = -1;
+							let maxAreaPoint = bucketStart;
+							
+							for (let j = bucketStart; j < bucketEnd && j < len; j++) {
+								if (!points[j]) continue;
+								const area = Math.abs(
+									(a * (points[j].temp - avgY)) +
+									(j * (avgY - pointA.temp)) +
+									(avgX * (pointA.temp - points[j].temp))
+								);
+								
+								if (area > maxArea) {
+									maxArea = area;
+									maxAreaPoint = j;
+								}
+							}
+							
+							if (maxAreaPoint < len && points[maxAreaPoint]) {
+								sampled.push(points[maxAreaPoint]);
+								a = maxAreaPoint;
+							}
 						}
-					}
-					return result;
+						
+						if (sampled[sampled.length - 1] !== points[len - 1]) {
+							sampled.push(points[len - 1]);
+						}
+						return sampled;
+					};
+					
+					return lttb(data, targetPoints);
 				};
 
 				let mergedData: GraphDataEntry[];
@@ -170,12 +218,12 @@ export default function Dashboard() {
 					);
 				}
 
-				saveGraphDataToCache(mergedData);
-				const downsampledData = downsampleData(mergedData);
+				const downsampledData = downsampleData(mergedData, 900);
+				saveGraphDataToCache(downsampledData);
 				setGraphData(downsampledData);
 				const firstTime = mergedData.length > 0 ? mergedData[0].timestamp : 'none';
 				const lastTime = mergedData.length > 0 ? mergedData[mergedData.length - 1].timestamp : 'none';
-				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'Downsampled:', downsampledData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
+				logUi(logPrefix, graphHours+"h chart:", 'New:', data.length, 'Total:', mergedData.length, 'Downsampled:', downsampledData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch graph data:', error);
 			}
@@ -187,7 +235,7 @@ export default function Dashboard() {
 			const randomId = Math.floor(Math.random() * 9000) + 1000;
 			const logPrefix = "[useCallback][fetchStatus]["+randomId+"]";
 			const startTime = performance.now();
-			logUi(logPrefix, 'Fetching status...'); 
+			// logUi(logPrefix, 'Fetching status...'); 
 			fetchStatusCounter.current++;
 			const shouldFetchGraph = fetchStatusCounter.current % 4 === 0;
 			try {
@@ -258,7 +306,25 @@ export default function Dashboard() {
 			if (d.vrTemp > max) max = d.vrTemp;
 		}
 		const padding = (max - min) * 0.1;
-		return [Math.max(0, min - padding), max + padding];
+		const domainMax = Math.max(max + padding, 100);
+		return [Math.max(0, min - padding), domainMax];
+	}, [graphData]);
+
+	const getStepTicks = useMemo((): number[] => {
+		if (graphData.length === 0) return [0, 1, 2, 3, 4];
+		let min = Infinity;
+		let max = -Infinity;
+		for (const d of graphData) {
+			if (d.stepDown < min) min = d.stepDown;
+			if (d.stepDown > max) max = d.stepDown;
+		}
+		min = Math.min(min, 0);
+		max = Math.max(max, 4);
+		const ticks: number[] = [];
+		for (let i = Math.ceil(min); i <= Math.floor(max); i++) {
+			ticks.push(i);
+		}
+		return ticks;
 	}, [graphData]);
 
 	const handleToggleStabilise = async () => {
@@ -672,7 +738,8 @@ export default function Dashboard() {
 									<YAxis
 										yAxisId="step"
 										orientation="right"
-										domain={[0, 'auto']}
+										domain={[(dataMin: number) => Math.min(dataMin, 0), (dataMax: number) => Math.max(dataMax, 4)]}
+										ticks={getStepTicks}
 										stroke="#22c55e"
 										tick={{ fontSize: 12 }}
 										label={{ value: 'Step', angle: 90, position: 'right', offset: -30, fill: '#22c55e' }}
