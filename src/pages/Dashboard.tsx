@@ -38,7 +38,7 @@ export default function Dashboard() {
 			const data = await getHistoryGraph(graphHours);
 			const transformed: GraphDataEntry[] = data.map(d => ({
 				timestamp: d.timestamp,
-				hashRate: d.hashRate / 1000,
+				hashRate: Math.round((d.hashRate / 1000) * 1000) / 1000,
 				temp: d.temp,
 				vrTemp: d.vrTemp,
 				stepDown: d.stepDown,
@@ -90,10 +90,9 @@ export default function Dashboard() {
 	const getHashrateDomain = (): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
 		const values = graphData.map((d) => d.hashRate);
-		const min = Math.min(...values);
 		const max = Math.max(...values);
-		const padding = (max - min) * 0.1;
-		return [Math.max(0, min - padding), max + padding];
+		const padding = max * 0.1;
+		return [0, max + padding];
 	};
 
 	const getTempDomain = (): [number, number] => {
@@ -238,7 +237,9 @@ export default function Dashboard() {
 						)}
 						{status?.showLowStepWarning && (
 							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
-								⚠️ Cannot attain the desired maximum frequency. 
+								⚠️ <strong>Cannot attain the desired maximum frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
+								<br />
+								<br />
 								Consider lowering this value so that it is holding closer to 0 at the ambient room temp. 
 								This may also allow you to reduce the core voltage increasing the efficiency of the device.
 								<br /><br />If it lowers over time, this may indicate a cooling issue with the device or a significant change to ambient temperature.
@@ -247,7 +248,14 @@ export default function Dashboard() {
 					</div>
 
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
-						<h2 className="text-lg font-semibold mb-4 dark:text-white">Stabiliser {status?.stabilise ? 'ON' : 'OFF'}</h2>
+						<h2 className="text-lg font-semibold mb-4 dark:text-white">
+							Stabiliser {status?.stabilise ? 'ON' : 'OFF'}
+							{status?.isStepStable && (
+								<span className="ml-2 px-2 py-1 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
+									Step {status.stableStepValue} Stable
+								</span>
+							)}
+						</h2>
 						<div className="flex flex-col gap-2">
 							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
 								status?.stabilise === true 
@@ -437,6 +445,7 @@ export default function Dashboard() {
 										domain={getTempDomain()}
 										stroke={document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'}
 										tick={{ fontSize: 12 }}
+										tickFormatter={(value) => Math.round(value).toString()}
 										label={{ value: '°C', angle: 90, position: 'insideRight', fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }}
 									/>
 									<YAxis

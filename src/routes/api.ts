@@ -21,6 +21,15 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		const lowStepCount = historyForAnalysis.filter(h => h.stepDown < threshold).length;
 		const showLowStepWarning = lowStepCount >= analyseRange;
 
+		const historyForStable = store.getLastNHistory(100);
+		const stepCounts = historyForStable.reduce((acc, h) => {
+			acc[h.stepDown] = (acc[h.stepDown] || 0) + 1;
+			return acc;
+		}, {} as Record<number, number>);
+		const mostCommonStep = Object.entries(stepCounts).sort((a, b) => b[1] - a[1])[0];
+		const stableStepCount = mostCommonStep ? mostCommonStep[1] : 0;
+		const isStepStable = historyForStable.length >= 100 && stableStepCount >= 95;
+
 		res.json({
 			running: state.running,
 			stabilise: state.stabilise,
@@ -32,6 +41,8 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 			events,
 			lowStepCount,
 			showLowStepWarning,
+			stableStepValue: isStepStable ? parseInt(mostCommonStep[0]) : null,
+			isStepStable,
 		});
 	});
 

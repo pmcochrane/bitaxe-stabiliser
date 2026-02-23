@@ -105,4 +105,5 @@ export interface MonitorState {
 	reachedInitialTemp: boolean;
 	lastFrequencyApplied: number;
 	lastCoreVoltageApplied: number;
+	drasticMeasureCounter: number;
 }

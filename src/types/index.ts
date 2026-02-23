@@ -54,6 +54,8 @@ export interface StatusResponse {
 	events: EventEntry[];
 	lowStepCount: number;
 	showLowStepWarning: boolean;
+	stableStepValue: number | null;
+	isStepStable: boolean;
 }
 
 export interface HistoryResponse {

@@ -19,9 +19,10 @@ export class MonitorService {
 	private stepDownDefault = 0;
 	private maxStepUp = 0;
 	private secondsBetweenPasses = 1;
-	private stepUpEveryXPasses = 3;
-	private stepDownEveryXPasses = 1;
+	private stepUpEveryXPasses = 3; // actually 4
+	private stepDownEveryXPasses = 2; // actually 3
 	private stabilisedCounterDefault = 15;
+	private drasticMeasureDelay = 3;
 
 	private maxSweepSteps = 24;
 	private sweepIterations = 600;
@@ -54,6 +55,7 @@ export class MonitorService {
 			reachedInitialTemp: false,
 			lastFrequencyApplied: 0,
 			lastCoreVoltageApplied: 0,
+			drasticMeasureCounter: this.drasticMeasureDelay,
 		};
 	}
 
@@ -109,12 +111,12 @@ export class MonitorService {
 
 	stabiliseOn(): void {
 		this.state.stabilise = true;
-		logMonitor('Stabilise enabled');
+		logMonitor(`[${this.iteration}] Stabilise enabled`);
 	}
 
 	stabiliseOff(): void {
 		this.state.stabilise = false;
-		logMonitor('Stabilise disabled');
+		logMonitor(`[${this.iteration}] Stabilise disabled`);
 	}
 
 	adjustFrequency(delta: number): void {
@@ -196,22 +198,23 @@ export class MonitorService {
 
 		this.client.getSystemInfo().then((info) => {
 			if (!info) {
-				logMonitor('No data received from Bitaxe');
+				logMonitor('[${this.iteration}] No data received from Bitaxe');
 				this.scheduleNext();
 				return;
-			}
 
-			const status = this.processReading(info);
-			if (status) {
-				this.store.addHistoryEntry(status);
-				if (this.state.running) {
-					this.evaluateAndAdjust(status);
+			} else {
+				const status = this.processReading(info);
+				if (status) {
+					if (this.state.running) {
+						this.evaluateAndAdjust(status);
+					}
+					this.store.addHistoryEntry(status);
 				}
 			}
 
 			this.scheduleNext();
 		}).catch((err) => {
-			logMonitor(`Failed to get system info: ${err}`);
+			logMonitor(`[${this.iteration}] Failed to get system info: ${err}`);
 			this.scheduleNext();
 		});
 	}
@@ -226,7 +229,6 @@ export class MonitorService {
 
 		if (this.applyChange) {
 			this.applyBitaxeSettings();
-			this.iteration = 1;
 			this.overallAverageHashRate = info.hashRate;
 			this.overallAverageAsicTemp = info.temp;
 			this.overallAverageVrTemp = info.vrTemp;
@@ -319,7 +321,7 @@ export class MonitorService {
 			return;
 		}
 
-		logMonitor(`${this.changeMessage}		Applying: Voltage=${this.settings.coreVoltage}mV, Freq=${this.desiredFreq}MHz`);
+		logMonitor(`[${this.iteration}] ${this.changeMessage}		Applying: Voltage=${this.settings.coreVoltage}mV, Freq=${this.desiredFreq}MHz`);
 		this.client.setSystemSettings(this.desiredFreq, this.settings.coreVoltage);
 
 		this.state.lastFrequencyApplied = this.desiredFreq;
@@ -364,12 +366,18 @@ export class MonitorService {
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
 			}
 		} else if (status.avgAsicTemp > fmaxAsic && this.autoAdjustFreq) {
-			if (status.temp > 72) {
-				const oldStepDown = this.state.stepDown;
-				this.state.stepDown -= 10;
-				this.changeMessage=    `Average ASIC temp Critical (${status.avgAsicTemp.toFixed(1)}°C), drastic measures: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
-				this.applyChange = true;
+			if (status.temp > emergencyOverheat) {
+				if (this.state.drasticMeasureCounter >= this.drasticMeasureDelay) {
+					const oldStepDown = this.state.stepDown;
+					this.state.stepDown -= 10;
+					this.changeMessage = `Average ASIC temp Critical (${status.avgAsicTemp.toFixed(1)}°C), drastic measures: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+					this.applyChange = true;
+					this.state.drasticMeasureCounter = 0;
+				} else {
+					this.state.drasticMeasureCounter++;
+				}
 			} else {
+				this.state.drasticMeasureCounter = 0;
 				this.state.stepDownCounter--;
 				if (this.state.stepDownCounter < 0) {
 					const oldStepDown = this.state.stepDown;
