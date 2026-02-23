@@ -14,11 +14,13 @@ export default function History() {
 	const [settings, setSettings] = useState<Settings>({
 		ip: '',
 		hostname: '',
-		targetAsic: 60,
+		targetAsic: 65,
 		maxVr: 80,
 		coreVoltage: 1300,
 		maxFreq: 900,
 		maxHistoryEntries: 172800,
+		lowStepAnalyseRange: 50,
+		lowStepWarningThreshold: -10,
 	});
 	const { modalState, showAlert, closeModal } = useModal();
 

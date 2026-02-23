@@ -6,6 +6,8 @@ export interface Settings {
 	coreVoltage: number;
 	maxFreq: number;
 	maxHistoryEntries: number;
+	lowStepAnalyseRange: number;
+	lowStepWarningThreshold: number;
 }
 
 export interface HistoryEntry {
@@ -50,6 +52,8 @@ export interface StatusResponse {
 	current: HistoryEntry | null;
 	history: HistoryEntry[];
 	events: EventEntry[];
+	lowStepCount: number;
+	showLowStepWarning: boolean;
 }
 
 export interface HistoryResponse {

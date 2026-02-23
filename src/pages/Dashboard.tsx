@@ -20,11 +20,13 @@ export default function Dashboard() {
 	const [settingsForm, setSettingsForm] = useState<Settings>({
 		ip: '',
 		hostname: '',
-		targetAsic: 60,
+		targetAsic: 65,
 		maxVr: 80,
 		coreVoltage: 1300,
 		maxFreq: 900,
 		maxHistoryEntries: 172800,
+		lowStepAnalyseRange: 50,
+		lowStepWarningThreshold: -10,
 	});
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [graphHours, setGraphHours] = useState(2);
@@ -234,9 +236,12 @@ export default function Dashboard() {
 						) : (
 							<div className="text-gray-500">No data available</div>
 						)}
-						{current && status?.history && status.history.length >= 50 && status.history.slice(-50).every(h => h.stepDown < 10) && (
+						{status?.showLowStepWarning && (
 							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
-								⚠️ Cannot attain the desired maximum frequency. Consider lowering this value so that it is holding closer to 0 at the ambient room temp. This may also allow you to reduce the core voltage increasing the efficiency of the device.<br /><br />If it lowers over time, this may indicate a cooling issue with the device.
+								⚠️ Cannot attain the desired maximum frequency. 
+								Consider lowering this value so that it is holding closer to 0 at the ambient room temp. 
+								This may also allow you to reduce the core voltage increasing the efficiency of the device.
+								<br /><br />If it lowers over time, this may indicate a cooling issue with the device or a significant change to ambient temperature.
 							</div>
 						)}
 					</div>
@@ -461,7 +466,7 @@ export default function Dashboard() {
 				)}
 
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-					<h2 className="text-lg font-semibold mb-4 dark:text-white">Last 10 Readings</h2>
+					<h2 className="text-lg font-semibold mb-4 dark:text-white">{status?.history && status.history.length ? 'Last '+status.history.length+' Readings' : "No Historical data"}</h2>
 					<div className="overflow-x-auto">
 						<table className="w-full text-sm">
 							<thead>

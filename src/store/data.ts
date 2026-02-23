@@ -58,11 +58,13 @@ export class DataStore {
 		return {
 			ip: '',
 			hostname: '',
-			targetAsic: 70,
-			maxVr: 93,
+			targetAsic: 65,
+			maxVr: 80,
 			coreVoltage: 1245,
 			maxFreq: 924.5,
 			maxHistoryEntries: 172800,
+			lowStepAnalyseRange: 50,
+			lowStepWarningThreshold: -10,
 		};
 	}
 

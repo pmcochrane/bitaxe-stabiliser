@@ -42,6 +42,8 @@ export interface Settings {
 	coreVoltage: number;
 	maxFreq: number;
 	maxHistoryEntries: number;
+	lowStepAnalyseRange: number;
+	lowStepWarningThreshold: number;
 }
 
 export interface HistoryEntry {

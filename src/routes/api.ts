@@ -8,12 +8,18 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 	const router = Router();
 
 	router.get('/status', (req: Request, res: Response) => {
-		const history = store.getLastNHistory(50);
+		const history = store.getLastNHistory(10);
 		const state = monitor.getState();
 		const settings = monitor.getSettings();
 		const events = store.getEvents();
 
 		const latest = history[history.length - 1] || null;
+		
+		const analyseRange = settings.lowStepAnalyseRange || 50;
+		const threshold = settings.lowStepWarningThreshold || -10;
+		const historyForAnalysis = store.getLastNHistory(analyseRange);
+		const lowStepCount = historyForAnalysis.filter(h => h.stepDown < threshold).length;
+		const showLowStepWarning = lowStepCount >= analyseRange;
 
 		res.json({
 			running: state.running,
@@ -24,6 +30,8 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 			current: latest,
 			history,
 			events,
+			lowStepCount,
+			showLowStepWarning,
 		});
 	});
 

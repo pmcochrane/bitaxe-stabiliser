@@ -8,12 +8,13 @@ import { DataStore } from './store';
 import { createApiRouter } from './routes';
 import { logIndex } from './utils/logger';
 import { log } from 'console';
+import e from 'express';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 if (!process.env.BITAXE_IP) {
 	console.error('Error: BITAXE_IP environment variable is required');
-	console.error('Please set BITAXE_IP (e.g., BITAXE_IP=192.168.1.100 npm start)');
+	console.error('Please set the environment variable BITAXE_IP (e.g., BITAXE_IP=192.168.1.100) and restart the application.');
 	process.exit(1);
 }
 
@@ -27,6 +28,8 @@ const TARGET_ASIC = process.env.TARGET_ASIC ? parseFloat(process.env.TARGET_ASIC
 const MAX_VR = process.env.MAX_VR ? parseFloat(process.env.MAX_VR) : undefined;
 const CORE_VOLTAGE = process.env.CORE_VOLTAGE ? parseInt(process.env.CORE_VOLTAGE) : undefined;
 const MAX_FREQ = process.env.MAX_FREQ ? parseFloat(process.env.MAX_FREQ) : undefined;
+const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(process.env.LOW_STEP_ANALYSE_RANGE) : undefined;
+const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 
 if (!fs.existsSync(DATA_DIR)) {
 	fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -58,66 +61,87 @@ async function initializeSettings() {
 	let settings = store.getSettings();
 	if (settings) {
 		logIndex('Loaded settings from file');
-		if (settings.ip) {
-			logIndex(`[settings.json] Bitaxe IP: ${settings.ip}`);
-		}
-		if (settings.hostname) {
-			logIndex(`[settings.json] hostname: ${settings.hostname}`);
-		}	
-		if (settings.coreVoltage) {
-			logIndex(`[settings.json] coreVoltage: ${settings.coreVoltage}`);
-		}
-		if (settings.maxFreq) {
-			logIndex(`[settings.json] maxFreq: ${settings.maxFreq}`);
-		}
-		if (settings.targetAsic) {
-			logIndex(`[settings.json] targetAsic: ${settings.targetAsic}`);
-		}
-		if (settings.maxVr) {
-			logIndex(`[settings.json] maxVr: ${settings.maxVr}`);
-		}
 	} else {
-		logIndex('No settings file found');
+		logIndex('No previous settings file found for this Bitaxe IP address');
 	}
 	
-	if (BITAXE_IP) {
-		settings.ip = BITAXE_IP;
-		settings.hostname = BITAXE_HOSTNAME;
-		
-		if (TARGET_ASIC !== undefined) {
-			settings.targetAsic = TARGET_ASIC;
-			logIndex(`[env] TARGET_ASIC: ${TARGET_ASIC}`);
-		}
-		if (MAX_VR !== undefined) {
-			settings.maxVr = MAX_VR;
-			logIndex(`[env] MAX_VR: ${MAX_VR}`);
-		}
-		
-		if (CORE_VOLTAGE !== undefined) {
-			settings.coreVoltage = CORE_VOLTAGE;
-			logIndex(`Using CORE_VOLTAGE from environment: ${CORE_VOLTAGE}`);
-		}
-		if (MAX_FREQ !== undefined) {
-			settings.maxFreq = MAX_FREQ;
-			logIndex(`Using MAX_FREQ from environment: ${MAX_FREQ}`);
-		}
-
-		if (!settings.coreVoltage || !settings.maxFreq) {
-			const bitaxeSettings = await getBitaxeSettings();
-			if (bitaxeSettings) {
-				if (!settings.coreVoltage) {
-					settings.coreVoltage = bitaxeSettings.coreVoltage;
-					logIndex(`Using current Bitaxe setting for coreVoltage: ${bitaxeSettings.coreVoltage}`);
-				}
-				if (!settings.maxFreq) {
-					settings.maxFreq = bitaxeSettings.frequency;
-					logIndex(`Using current Bitaxe setting for maxFreq: ${bitaxeSettings.frequency}`);
-				}
-			}
-		}
-		
-		store.saveSettings(settings);
+	settings.ip = BITAXE_IP;
+	settings.hostname = BITAXE_HOSTNAME;
+	
+	// get targetAsic setting from env, then settings file, then default to 65
+	if (TARGET_ASIC !== undefined) {
+		settings.targetAsic = TARGET_ASIC;
+		logIndex(`[env] targetAsic: ${settings.targetAsic}`);
+	} else if (settings.targetAsic) {
+		logIndex(`[settings.json] targetAsic: ${settings.targetAsic}`);
+	} else {
+		settings.targetAsic = 65;
+		logIndex(`[default] targetAsic: 65`);
 	}
+	
+	// get maxVr setting from env, then settings file, then default to 80
+	if (MAX_VR !== undefined) {
+		settings.maxVr = MAX_VR;
+		logIndex(`[env] maxVr: ${settings.maxVr}`);
+	} else if (settings.maxVr) {
+		logIndex(`[settings.json] maxVr: ${settings.maxVr}`);
+	} else {
+		settings.maxVr = 80;
+		logIndex(`[default] maxVr: 80`);
+	}
+	
+	const bitaxeSettings = await getBitaxeSettings();
+
+	// get coreVoltage setting from env, then settings file, then current Bitaxe setting, then default to 1150
+	if (CORE_VOLTAGE !== undefined) {
+		settings.coreVoltage = CORE_VOLTAGE;
+		logIndex(`[env] coreVoltage: ${settings.coreVoltage}`);
+	} else if (settings.coreVoltage) {
+		logIndex(`[settings.json] coreVoltage: ${settings.coreVoltage}`);
+	} else if (bitaxeSettings?.coreVoltage) {
+		settings.coreVoltage = bitaxeSettings.coreVoltage;
+		logIndex(`[bitaxe] Using current Bitaxe setting for coreVoltage: ${settings.coreVoltage}`);
+	} else {
+		settings.coreVoltage = 1150;
+		logIndex(`[default] coreVoltage: ${settings.coreVoltage}`);
+	}
+
+	if (MAX_FREQ !== undefined) {
+		settings.maxFreq = MAX_FREQ;
+		logIndex(`[env] maxFreq: ${settings.maxFreq}`);
+	} else if (settings.maxFreq) {
+		logIndex(`[settings.json] maxFreq: ${settings.maxFreq}`);
+	} else if (bitaxeSettings?.frequency) {
+		settings.maxFreq = bitaxeSettings.frequency;
+		logIndex(`[bitaxe] Using current Bitaxe setting for maxFreq: ${settings.maxFreq}`);
+	} else {
+		settings.maxFreq = 525.0;
+		logIndex(`[default] maxFreq: ${settings.maxFreq}`);
+	}
+
+	// get low step warning settings from env, then settings file, then default
+	if (LOW_STEP_ANALYSE_RANGE !== undefined) {
+		settings.lowStepAnalyseRange = LOW_STEP_ANALYSE_RANGE;
+		logIndex(`[env] lowStepAnalyseRange: ${settings.lowStepAnalyseRange}`);
+	} else if (settings.lowStepAnalyseRange) {
+		logIndex(`[settings.json] lowStepAnalyseRange: ${settings.lowStepAnalyseRange}`);
+	} else {
+		settings.lowStepAnalyseRange = 50;
+		logIndex(`[default] lowStepAnalyseRange: ${settings.lowStepAnalyseRange}`);
+	}
+
+	// get low step warning threshold settings from env, then settings file, then default
+	if (LOW_STEP_WARNING_THRESHOLD !== undefined) {
+		settings.lowStepWarningThreshold = LOW_STEP_WARNING_THRESHOLD;
+		logIndex(`[env] lowStepWarningThreshold: ${settings.lowStepWarningThreshold}`);
+	} else if (settings.lowStepWarningThreshold) {
+		logIndex(`[settings.json] lowStepWarningThreshold: ${settings.lowStepWarningThreshold}`);
+	} else {
+		settings.lowStepWarningThreshold = -10;
+		logIndex(`[default] lowStepWarningThreshold: ${settings.lowStepWarningThreshold}`);
+	}
+
+	store.saveSettings(settings);
 	
 	return settings;
 }
