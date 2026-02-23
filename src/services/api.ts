@@ -32,6 +32,13 @@ export async function getHistory(page = 1, limit = 50, sort: 'asc' | 'desc' = 'd
 	return data;
 }
 
+export async function getHistoryPages(limit = 50, sort: 'asc' | 'desc' = 'desc'): Promise<{ page: number; firstTime: string; lastTime: string }[]> {
+	const { data } = await api.get<{ page: number; firstTime: string; lastTime: string }[]>('/history/pages', {
+		params: { limit, sort },
+	});
+	return data;
+}
+
 export async function getHistoryGraph(hours = 24, since?: string): Promise<HistoryEntry[]> {
 	const params: { hours: number; since?: string } = { hours };
 	if (since) {

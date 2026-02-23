@@ -34,6 +34,7 @@ export default function Dashboard() {
 	const [isPageVisible, setIsPageVisible] = useState(true);
 	const [isDarkMode, setIsDarkMode] = useState(false);
 	const { modalState, showConfirm, showAlert, closeModal } = useModal();
+	const prevGraphHours = useRef(graphHours);
 
 	useEffect(() => {
 		const observer = new MutationObserver(() => {
@@ -110,8 +111,10 @@ export default function Dashboard() {
 			const startTime = performance.now();
 			logUi(logPrefix, 'Fetching graph data for last', graphHours, 'hours...');
 			try {
-				const cachedData = graphDataRef.current.length > 0 ? graphDataRef.current : loadCachedGraphData(graphHours);
-				const latestTimestamp = cachedData.length > 0 
+				const cachedData = loadCachedGraphData(graphHours);
+				const isNewTimeRange = prevGraphHours.current !== graphHours;
+				prevGraphHours.current = graphHours;
+				const latestTimestamp = !isNewTimeRange && cachedData.length > 0
 					? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
 						new Date(entry.timestamp) > new Date(latest) ? entry.timestamp : latest, cachedData[0].timestamp)
 					: undefined;
@@ -148,7 +151,9 @@ export default function Dashboard() {
 
 				saveGraphDataToCache(mergedData);
 				setGraphData(mergedData);
-				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'Since:', latestTimestamp || 'beginning', `[took ${Math.round(performance.now() - startTime)}ms]`);
+				const firstTime = mergedData.length > 0 ? mergedData[0].timestamp : 'none';
+				const lastTime = mergedData.length > 0 ? mergedData[mergedData.length - 1].timestamp : 'none';
+				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch graph data:', error);
 			}

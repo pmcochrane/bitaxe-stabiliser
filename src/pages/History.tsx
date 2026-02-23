@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { getHistory, getSettings } from '../services/api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getHistory, getHistoryPages, getSettings } from '../services/api';
 import type { HistoryEntry, HistoryResponse, Settings } from '../types';
 import { Modal, useModal } from '../components/Modal';
+
+const TABLE_ROW_HEIGHT = 40;
 
 export default function History() {
 	const [data, setData] = useState<HistoryEntry[]>([]);
@@ -24,10 +26,28 @@ export default function History() {
 	});
 	const { modalState, showAlert, closeModal } = useModal();
 
+	const [sliderPage, setSliderPage] = useState(page);
+	const [sliderTooltip, setSliderTooltip] = useState<{ page: number; firstTime: string; lastTime: string } | null>(null);
+	const [pageTimestamps, setPageTimestamps] = useState<{ page: number; firstTime: string; lastTime: string }[]>([]);
+	const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newPage = parseInt(e.target.value);
+		setSliderPage(newPage);
+		const pageData = pageTimestamps.find(p => p.page === newPage);
+		if (pageData) {
+			setSliderTooltip({ page: newPage, firstTime: new Date(pageData.firstTime).toLocaleString(), lastTime: new Date(pageData.lastTime).toLocaleString() });
+		} else {
+			setSliderTooltip({ page: newPage, firstTime: '...', lastTime: '...' });
+		}
+		if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+		debounceTimeoutRef.current = setTimeout(() => {
+			setPage(newPage);
+			setSliderTooltip(null);
+		}, 500);
+	};
+
 	const getTempColor = (temp: number, target: number) => {
-		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
-		if (temp < target - 1) return 'text-blue-900 dark:text-blue-400';
-		return 'text-green-600 dark:text-green-400';
 	};
 
 	const fetchHistory = async () => {
@@ -47,6 +67,28 @@ export default function History() {
 	useEffect(() => {
 		getSettings().then(setSettings).catch(console.error);
 	}, []);
+
+	useEffect(() => {
+		getHistoryPages(limit, sort).then(setPageTimestamps).catch(console.error);
+	}, [limit, sort]);
+
+	useEffect(() => {
+		setSliderPage(page);
+	}, [page]);
+
+	const calculateLimit = useCallback(() => {
+		const headerHeight = 200;
+		const paginationHeight = 60;
+		const availableHeight = window.innerHeight - headerHeight - paginationHeight;
+		return Math.max(10, Math.floor(availableHeight / TABLE_ROW_HEIGHT));
+	}, []);
+
+	useEffect(() => {
+		setLimit(calculateLimit());
+		const handleResize = () => setLimit(calculateLimit());
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, [calculateLimit]);
 
 	useEffect(() => {
 		fetchHistory();
@@ -104,40 +146,55 @@ export default function History() {
 			/>
 			<div className="container mx-auto p-4">
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
-				<div className="flex flex-wrap gap-4 items-end">
-					<div>
-						<label className="block text-sm font-medium dark:text-white">Page</label>
-						<input
-							type="number"
-							value={page}
-							onChange={(e) => setPage(Math.max(1, parseInt(e.target.value) || 1))}
-							min={1}
-							className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white w-20"
-						/>
+				<div className="flex flex-wrap gap-4 items-center">
+					<select
+						value={sort}
+						onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
+						className="px-2 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+					>
+						<option value="desc">Newest First</option>
+						<option value="asc">Oldest First</option>
+					</select>
+					<button
+						onClick={() => setPage(Math.max(1, page - 1))}
+						disabled={page === 1}
+						className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-600 dark:text-white disabled:opacity-50"
+					>
+						Prev
+					</button>
+					<button
+						onClick={() => setPage(Math.min(totalPages, page + 1))}
+						disabled={page === totalPages}
+						className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-600 dark:text-white disabled:opacity-50"
+					>
+						Next
+					</button>
+					<div className="flex items-center gap-2 flex-1">
+						<span className="text-sm text-gray-500 dark:text-gray-400">1</span>
+						<div className="relative flex-1">
+							<input
+								type="range"
+								min={1}
+								max={totalPages}
+								value={sliderPage}
+								onChange={handleSliderChange}
+								className="w-full h-4 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600"
+							/>
+							{sliderTooltip && (
+								<div 
+									className="absolute -top-8 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10"
+									style={{ left: `${((sliderTooltip.page - 1) / (totalPages - 1 || 1)) * 100}%` }}
+								>
+									{sliderTooltip.firstTime} - {sliderTooltip.lastTime}
+								</div>
+							)}
+						</div>
+						<span className="text-sm text-gray-500 dark:text-gray-400">{totalPages}</span>
 					</div>
-					<div>
-						<label className="block text-sm font-medium dark:text-white">Limit</label>
-						<select
-							value={limit}
-							onChange={(e) => setLimit(parseInt(e.target.value))}
-							className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-						>
-							<option value={50}>50</option>
-							<option value={100}>100</option>
-							<option value={200}>200</option>
-							<option value={500}>500</option>
-						</select>
-					</div>
-					<div>
-						<label className="block text-sm font-medium dark:text-white">Sort</label>
-						<select
-							value={sort}
-							onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
-							className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-						>
-							<option value="desc">Newest First</option>
-							<option value="asc">Oldest First</option>
-						</select>
+					<div className="text-sm text-gray-500 dark:text-gray-400 self-center text-center">
+						Page {page} of {totalPages} ({total} entries)
+						<br />
+						Rows per page: {limit}
 					</div>
 					<button
 						onClick={fetchHistory}
@@ -202,20 +259,6 @@ export default function History() {
 							)}
 						</tbody>
 					</table>
-				</div>
-				<div className="mt-4 flex justify-center gap-2">
-					{Array.from({ length: Math.min(totalPages, 10) }, (_, i) => (
-						<button
-							key={i + 1}
-							onClick={() => setPage(i + 1)}
-							className={`px-3 py-1 rounded ${
-								page === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 dark:text-white'
-							}`}
-						>
-							{i + 1}
-						</button>
-					))}
-					<span className="ml-2 text-sm text-gray-500 dark:text-gray-400 self-center">Total: {total} entries</span>
 				</div>
 			</div>
 		</div>

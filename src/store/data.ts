@@ -162,6 +162,28 @@ export class DataStore {
 		};
 	}
 
+	getHistoryPageTimestamps(limit: number, sortDesc: boolean = true): { page: number; firstTime: string; lastTime: string }[] {
+		let sorted = [...this.data.history];
+		if (sortDesc) {
+			sorted.reverse();
+		}
+		const total = sorted.length;
+		const totalPages = Math.ceil(total / limit);
+		const result: { page: number; firstTime: string; lastTime: string }[] = [];
+		for (let page = 1; page <= totalPages; page++) {
+			const start = (page - 1) * limit;
+			const end = Math.min(start + limit, total);
+			if (start < total) {
+				result.push({
+					page,
+					firstTime: sorted[start].timestamp,
+					lastTime: sorted[end - 1].timestamp,
+				});
+			}
+		}
+		return result;
+	}
+
 	addHistoryEntry(entry: HistoryEntry): void {
 		this.data.history.push(entry);
 		this.pruneHistory();

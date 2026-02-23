@@ -123,6 +123,14 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		res.json(result);
 	});
 
+	router.get('/history/pages', (req: Request, res: Response) => {
+		const limit = parseInt(req.query.limit as string) || 50;
+		const sort = req.query.sort === 'asc';
+
+		const pageTimestamps = store.getHistoryPageTimestamps(limit, !sort);
+		res.json(pageTimestamps);
+	});
+
 	router.get('/history/graph', (req: Request, res: Response) => {
 		const hours = parseInt(req.query.hours as string) || 24;
 		const since = req.query.since as string | undefined;
