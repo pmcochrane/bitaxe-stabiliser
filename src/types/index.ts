@@ -48,6 +48,8 @@ export interface StatusResponse {
 	stabilise: boolean;
 	sweepMode: boolean;
 	stepDown: number;
+	sweepIterations: number;
+	sweepIterationsCounter: number;
 	settings: Settings;
 	current: HistoryEntry | null;
 	history: HistoryEntry[];

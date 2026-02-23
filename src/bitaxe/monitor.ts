@@ -25,7 +25,7 @@ export class MonitorService {
 	private drasticMeasureDelay = 3;
 
 	private maxSweepSteps = 24;
-	private sweepIterations = 600;
+	private sweepIterations = 150;
 	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
 
@@ -36,6 +36,7 @@ export class MonitorService {
 	private overallAverageVrTemp = 0;
 	private overallAverageVoltage = 0;
 	private overallAveragePower = 0;
+	private expectedHashRate = 0;
 	private desiredFreq = 0;
 	private autoAdjustFreq = true;
 
@@ -78,6 +79,13 @@ export class MonitorService {
 
 	getState(): MonitorState {
 		return { ...this.state };
+	}
+
+	getSweepInfo(): { iterations: number; counter: number } {
+		return {
+			iterations: this.sweepIterations,
+			counter: this.sweepIterationsCounter,
+		};
 	}
 
 	getClient(): BitaxeClient {
@@ -148,6 +156,7 @@ export class MonitorService {
 		this.autoAdjustFreq = false;
 		this.applyChange = true;
 		this.sweepIterationsCounter = 0;
+		this.store.clearHashrange();
 		this.changeMessage=`Sweep started: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
@@ -225,6 +234,7 @@ export class MonitorService {
 
 	private processReading(info: BitaxeSystemInfo): BitaxeStatus | null {
 		const timestamp = new Date().toISOString();
+		this.expectedHashRate = info.expectedHashrate;
 		const expectedHashRate = info.expectedHashrate;
 
 		if (this.applyChange) {
@@ -412,6 +422,9 @@ export class MonitorService {
 
 		if (this.state.sweepMode) {
 			this.sweepIterationsCounter++;
+			if (this.sweepIterationsCounter === 1 || this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
+				logMonitor(`Sweep: stepDown=${this.state.stepDown}, iteration=${this.sweepIterationsCounter}/${this.sweepIterations}`);
+			}
 			if (this.sweepIterationsCounter >= this.sweepIterations) {
 				if (this.state.stepDown >= 0) {
 					this.stopSweep();
@@ -429,14 +442,17 @@ export class MonitorService {
 	}
 
 	private saveHashrange(): void {
+		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
+			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
+			: 0;
 		const entry: HashrangeEntry = {
 			frequency: this.desiredFreq,
 			coreVoltage: this.settings.coreVoltage,
 			minHashRate: this.minHashRate,
 			avgHashRate: this.overallAverageHashRate,
 			maxHashRate: this.maxHashRate,
-			expectedHashRate: 0,
-			toExpected: 0,
+			expectedHashRate: this.expectedHashRate,
+			toExpected: toExpected,
 			efficiency: (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1),
 			avgAsicTemp: this.overallAverageAsicTemp,
 			avgVrTemp: this.overallAverageVrTemp,

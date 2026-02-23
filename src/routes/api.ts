@@ -32,12 +32,15 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 		const bitaxeReachable = await monitor.getClient().isReachable();
 		const bitaxeError = bitaxeReachable ? '' : monitor.getClient().getLastError();
+		const sweepInfo = monitor.getSweepInfo();
 
 		res.json({
 			running: state.running,
 			stabilise: state.stabilise,
 			sweepMode: state.sweepMode,
 			stepDown: state.stepDown,
+			sweepIterations: sweepInfo.iterations,
+			sweepIterationsCounter: sweepInfo.counter,
 			settings,
 			current: latest,
 			history,

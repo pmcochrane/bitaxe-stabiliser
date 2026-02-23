@@ -30,7 +30,7 @@ export function Modal({ isOpen, title, message, type, onConfirm, onCancel }: Mod
 			/>
 			<div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border dark:border-gray-700 animate-in fade-in zoom-in-95 duration-200">
 				<h2 className="text-xl font-semibold mb-2 dark:text-white">{title}</h2>
-				<p className="text-gray-600 dark:text-gray-300 mb-6">{message}</p>
+				<p className="text-gray-600 dark:text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: message }} />
 				
 				<div className="flex justify-end gap-3">
 					{type === 'confirm' ? (

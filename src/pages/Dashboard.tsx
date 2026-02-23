@@ -338,6 +338,9 @@ export default function Dashboard() {
 
 	const handleToggleStabilise = async () => {
 		if (!status) return;
+		if (status.sweepMode) {
+			sendControl({ action: 'stopSweep' });
+		}
 		await sendControl({ action: status.stabilise ? 'stabiliseOff' : 'stabiliseOn' });
 		setTimeout(fetchStatus, 100);
 	};
@@ -361,8 +364,26 @@ export default function Dashboard() {
 
 	const handleToggleSweep = async () => {
 		if (!status) return;
-		sendControl({ action: status.sweepMode ? 'stopSweep' : 'startSweep' });
-		setTimeout(fetchStatus, 100);
+		if (status.sweepMode) {
+			sendControl({ action: 'stopSweep' });
+			setTimeout(fetchStatus, 100);
+		} else {
+			const confirmed = await showConfirm(
+				'Start Sweep Mode',
+				`This mode will cycle through each throttle step level until it reaches your set maximum frequency and record the hash rate at each level. The process is as follows:
+				<br /><br />• Start at stepDown = -24
+				<br />• Hash for approx 3 minutes at this step level
+				<br />• Record hash rate data at each frequency
+				<br />• Increment step by 1
+				<br />• Stop automatically when step reaches 0
+				<br /><br />This helps find the optimal frequency/voltage combination but will take a significant time to run.
+				<br /><br />Continue?`
+			);
+			if (confirmed) {
+				sendControl({ action: 'startSweep' });
+				setTimeout(fetchStatus, 100);
+			}
+		}
 	};
 
 	const handleResetData = async () => {
@@ -490,6 +511,11 @@ export default function Dashboard() {
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Step</div>
 									<div className="text-xl font-bold dark:text-white">{current.stepDown}</div>
+									{status?.isStepStable && (
+										<span className="ml-2 px-2 py-1 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
+											Stable
+										</span>
+									)}
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Frequency</div>
@@ -514,7 +540,7 @@ export default function Dashboard() {
 						)}
 
 						{/* Low step warning alert */}
-						{status?.showLowStepWarning && (
+						{status?.showLowStepWarning && !status?.sweepMode && (
 							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Cannot attain the desired maximum frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<br />
@@ -530,12 +556,33 @@ export default function Dashboard() {
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">
 							Stabiliser {status?.stabilise ? 'ON' : 'OFF'}
-							{status?.isStepStable && (
-								<span className="ml-2 px-2 py-1 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
-									Step {status.stableStepValue} Stable
-								</span>
-							)}
 						</h2>
+						{status?.sweepMode && (() => {
+							const progress = Math.round(((status.stepDown + 24) / 24) * 100);
+							const stepsRemaining = 24 - (status.stepDown + 24);
+							const iterationsPerStep = status.sweepIterations || 150;
+							const currentIteration = status.sweepIterationsCounter || 0;
+							const secondsPerIteration = 1;
+							const currentStepRemaining = (iterationsPerStep - currentIteration) * secondsPerIteration;
+							const totalRemainingSeconds = (stepsRemaining * iterationsPerStep) + currentStepRemaining;
+							const minutesRemaining = Math.round(totalRemainingSeconds / 60);
+							return (
+								<div className="mb-4 p-3 bg-orange-100 dark:bg-orange-900 border border-orange-500 text-orange-700 dark:text-orange-300 rounded text-sm">
+									<strong className="text-lg">Sweep Mode Active</strong>
+									<br />
+									stepDown: {status.stepDown}
+									<div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+										<div 
+											className="bg-orange-500 h-2.5 rounded-full" 
+											style={{ width: `${progress}%` }}
+										/>
+									</div>
+									<div className="text-xs mt-1 text-right">
+										{progress}% complete (~{minutesRemaining} min remaining)
+									</div>
+								</div>
+							);
+						})()}
 						<div className="flex flex-col gap-2">
 							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
 								status?.stabilise === true 
@@ -720,7 +767,7 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</div>
-						<div className="h-[480px]">
+						<div className="h-[640px]">
 							<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />

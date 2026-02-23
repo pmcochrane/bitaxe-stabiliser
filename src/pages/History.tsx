@@ -110,6 +110,10 @@ export default function History() {
 			setTableHeight(r.tableHeight);
 		};
 		window.addEventListener('resize', handleResize);
+		
+		setTimeout(handleResize, 100);
+		setTimeout(handleResize, 300);
+		
 		return () => window.removeEventListener('resize', handleResize);
 	}, [calculateRowsPerPage]);
 
