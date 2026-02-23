@@ -56,6 +56,8 @@ export interface StatusResponse {
 	showLowStepWarning: boolean;
 	stableStepValue: number | null;
 	isStepStable: boolean;
+	bitaxeReachable: boolean;
+	bitaxeError: string;
 }
 
 export interface HistoryResponse {

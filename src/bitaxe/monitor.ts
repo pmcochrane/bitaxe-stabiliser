@@ -198,7 +198,7 @@ export class MonitorService {
 
 		this.client.getSystemInfo().then((info) => {
 			if (!info) {
-				logMonitor('[${this.iteration}] No data received from Bitaxe');
+				logMonitor(`[${this.iteration}] No data received from Bitaxe`);
 				this.scheduleNext();
 				return;
 

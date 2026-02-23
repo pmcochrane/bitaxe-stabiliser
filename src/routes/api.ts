@@ -7,7 +7,7 @@ import { logApi } from '../utils/logger';
 export function createApiRouter(monitor: MonitorService, store: DataStore): Router {
 	const router = Router();
 
-	router.get('/status', (req: Request, res: Response) => {
+	router.get('/status', async (req: Request, res: Response) => {
 		const history = store.getLastNHistory(10);
 		const state = monitor.getState();
 		const settings = monitor.getSettings();
@@ -30,6 +30,9 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		const stableStepCount = mostCommonStep ? mostCommonStep[1] : 0;
 		const isStepStable = historyForStable.length >= 100 && stableStepCount >= 95;
 
+		const bitaxeReachable = await monitor.getClient().isReachable();
+		const bitaxeError = bitaxeReachable ? '' : monitor.getClient().getLastError();
+
 		res.json({
 			running: state.running,
 			stabilise: state.stabilise,
@@ -43,6 +46,8 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 			showLowStepWarning,
 			stableStepValue: isStepStable ? parseInt(mostCommonStep[0]) : null,
 			isStepStable,
+			bitaxeReachable,
+			bitaxeError,
 		});
 	});
 

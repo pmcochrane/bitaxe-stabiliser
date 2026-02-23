@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
@@ -31,7 +31,16 @@ export default function Dashboard() {
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [graphHours, setGraphHours] = useState(2);
 	const [isPageVisible, setIsPageVisible] = useState(true);
+	const [isDarkMode, setIsDarkMode] = useState(false);
 	const { modalState, showConfirm, showAlert, closeModal } = useModal();
+
+	useEffect(() => {
+		const observer = new MutationObserver(() => {
+			setIsDarkMode(isDarkMode);
+		});
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		return () => observer.disconnect();
+	}, []);
 
 	const fetchGraphData = useCallback(async () => {
 		try {
@@ -76,7 +85,7 @@ export default function Dashboard() {
 	useEffect(() => {
 		fetchGraphData();
 		if (isPageVisible) {
-			const interval = setInterval(fetchGraphData, 5000);
+			const interval = setInterval(fetchGraphData, 10000);
 			return () => clearInterval(interval);
 		}
 	}, [fetchGraphData, isPageVisible]);
@@ -87,15 +96,15 @@ export default function Dashboard() {
 		return () => clearInterval(interval);
 	}, [fetchStatus]);
 
-	const getHashrateDomain = (): [number, number] => {
+	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
 		const values = graphData.map((d) => d.hashRate);
 		const max = Math.max(...values);
 		const padding = max * 0.1;
 		return [0, max + padding];
-	};
+	}, [graphData]);
 
-	const getTempDomain = (): [number, number] => {
+	const getTempDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 100];
 		const tempValues = graphData.map((d) => d.temp);
 		const vrTempValues = graphData.map((d) => d.vrTemp);
@@ -103,13 +112,13 @@ export default function Dashboard() {
 		const max = Math.max(...tempValues, ...vrTempValues);
 		const padding = (max - min) * 0.1;
 		return [Math.max(0, min - padding), max + padding];
-	};
+	}, [graphData]);
 
 	useEffect(() => {
 		fetchGraphData();
 		const interval = setInterval(fetchGraphData, 30000);
 		return () => clearInterval(interval);
-	}, [fetchGraphData]);
+	}, [fetchGraphData, isPageVisible]);
 
 	const handleToggleStabilise = async () => {
 		if (!status) return;
@@ -118,18 +127,25 @@ export default function Dashboard() {
 	};
 
 	const handleAdjustFreq = async (delta: number) => {
-		await sendControl({ action: 'adjustFreq', value: delta });
+		sendControl({ action: 'adjustFreq', value: delta });
 		setTimeout(fetchStatus, 100);
 	};
 
 	const handleAdjustVoltage = async (delta: number) => {
-		await sendControl({ action: 'adjustVoltage', value: delta });
+		sendControl({ action: 'adjustVoltage', value: delta });
+		setSettingsForm(prev => ({ ...prev, coreVoltage: prev.coreVoltage + delta }));
+		setTimeout(fetchStatus, 100);
+	};
+
+	const handleAdjustMaxFreq = async (delta: number) => {
+		updateSettings({ maxFreq: settingsForm.maxFreq + delta });
+		setSettingsForm(prev => ({ ...prev, maxFreq: prev.maxFreq + delta }));
 		setTimeout(fetchStatus, 100);
 	};
 
 	const handleToggleSweep = async () => {
 		if (!status) return;
-		await sendControl({ action: status.sweepMode ? 'stopSweep' : 'startSweep' });
+		sendControl({ action: status.sweepMode ? 'stopSweep' : 'startSweep' });
 		setTimeout(fetchStatus, 100);
 	};
 
@@ -139,7 +155,7 @@ export default function Dashboard() {
 			'Clear all stored data? This will clear the graph data and the history page.'
 		);
 		if (confirmed) {
-			await sendControl({ action: 'resetData' });
+			sendControl({ action: 'resetData' });
 			setTimeout(fetchStatus, 100);
 			setTimeout(fetchGraphData, 200);
 		}
@@ -147,7 +163,7 @@ export default function Dashboard() {
 
 	const handleSettingsSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		await updateSettings(settingsForm);
+		updateSettings(settingsForm);
 		await showAlert('Settings Saved', 'Your settings have been saved successfully.');
 		fetchStatus();
 	};
@@ -156,6 +172,19 @@ export default function Dashboard() {
 		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
 		if (temp < target - 1) return 'text-blue-900 dark:text-blue-400';
 		return 'text-green-600 dark:text-green-400';
+	};
+
+	const isValueChanged = (formValue: number, storedValue: number | undefined) => {
+		if (storedValue === undefined) return false;
+		return formValue !== storedValue;
+	};
+
+	const getInputClass = (formValue: number, storedValue: number | undefined) => {
+		const baseClass = 'w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white';
+		if (isValueChanged(formValue, storedValue)) {
+			return `${baseClass} border-amber-500 dark:border-amber-400`;
+		}
+		return baseClass;
 	};
 
 	if (loading) {
@@ -182,12 +211,18 @@ export default function Dashboard() {
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
-						{current?.overheatMode && (
+						{status?.bitaxeReachable === false && (
+							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
+								⚠️ Communication Error - Unable to connect to Bitaxe<br />
+								<span className="text-sm font-normal">{status.bitaxeError}</span>
+							</div>
+						)}
+						{current?.overheatMode && status?.bitaxeReachable !== false && (
 							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
 								⚠️ Currently In Overheat Mode. Will need reset.
 							</div>
 						)}
-						{current ? (
+						{current && status?.bitaxeReachable !== false ? (
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
@@ -232,6 +267,8 @@ export default function Dashboard() {
 									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(2)} J/TH</div>
 								</div>
 							</div>
+						) : status?.bitaxeReachable === false ? (
+							<div className="text-gray-500">Waiting for bitaxe to respond on {status.settings.ip}...</div>
 						) : (
 							<div className="text-gray-500">No data available</div>
 						)}
@@ -319,6 +356,20 @@ export default function Dashboard() {
 									Voltage -
 								</button>
 							</div>
+							<div className="flex flex-col gap-2">
+								<button
+									onClick={() => handleAdjustMaxFreq(6.25)}
+									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90"
+								>
+									Max Freq +
+								</button>
+								<button
+									onClick={() => handleAdjustMaxFreq(-6.25)}
+									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90"
+								>
+									Max Freq -
+								</button>
+							</div>
 							<button
 								onClick={handleToggleSweep}
 								className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 self-start"
@@ -340,7 +391,7 @@ export default function Dashboard() {
 									type="number"
 									value={settingsForm.targetAsic}
 									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseInt(e.target.value) })}
-									className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
 									step={1}
 								/>
 							</div>
@@ -350,7 +401,7 @@ export default function Dashboard() {
 									type="number"
 									value={settingsForm.maxVr}
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxVr: parseInt(e.target.value) })}
-									className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									className={getInputClass(settingsForm.maxVr, status?.settings.maxVr)}
 									step={1}
 								/>
 							</div>
@@ -360,7 +411,7 @@ export default function Dashboard() {
 									type="number"
 									value={settingsForm.coreVoltage}
 									onChange={(e) => setSettingsForm({ ...settingsForm, coreVoltage: parseInt(e.target.value) })}
-									className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									className={getInputClass(settingsForm.coreVoltage, status?.settings.coreVoltage)}
 									step={5}
 								/>
 							</div>
@@ -370,7 +421,7 @@ export default function Dashboard() {
 									type="number"
 									value={settingsForm.maxFreq}
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxFreq: parseFloat(e.target.value) })}
-									className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
 									step={0.5}
 								/>
 							</div>
@@ -425,16 +476,16 @@ export default function Dashboard() {
 						<div className="h-80">
 							<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 80, left: 20, bottom: 5 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke={document.documentElement.classList.contains('dark') ? '#4b5563' : '#e5e7eb'} />
+									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
 									<XAxis
 										dataKey="timestamp"
 										tickFormatter={(value: any) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-										stroke={document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'}
+										stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
 										tick={{ fontSize: 12 }}
 									/>
 									<YAxis
 										yAxisId="hashrate"
-										domain={getHashrateDomain()}
+										domain={getHashrateDomain}
 										stroke="#8884d8"
 										tick={{ fontSize: 12 }}
 										label={{ value: 'TH/s', angle: -90, position: 'insideLeft', fill: '#8884d8' }}
@@ -442,11 +493,11 @@ export default function Dashboard() {
 									<YAxis
 										yAxisId="temp"
 										orientation="right"
-										domain={getTempDomain()}
-										stroke={document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'}
+										domain={getTempDomain}
+										stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
 										tick={{ fontSize: 12 }}
 										tickFormatter={(value) => Math.round(value).toString()}
-										label={{ value: '°C', angle: 90, position: 'insideRight', fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }}
+										label={{ value: '°C', angle: 90, position: 'insideRight', fill: isDarkMode ? '#9ca3af' : '#6b7280' }}
 									/>
 									<YAxis
 										yAxisId="step"
@@ -457,9 +508,9 @@ export default function Dashboard() {
 									/>
 									<Tooltip
 										contentStyle={{
-											backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
-											border: document.documentElement.classList.contains('dark') ? '#4b5563' : '#e5e7eb',
-											color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+											backgroundColor: isDarkMode ? '#1f2937' : '#fff',
+											border: isDarkMode ? '#4b5563' : '#e5e7eb',
+											color: isDarkMode ? '#fff' : '#000',
 										}}
 										labelFormatter={(value: any) => new Date(value).toLocaleString()}
 									/>
