@@ -164,7 +164,7 @@ export default function Dashboard() {
 	const handleSettingsSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		updateSettings(settingsForm);
-		await showAlert('Settings Saved', 'Your settings have been saved successfully.');
+		await showAlert('Settings Saved', 'Your settings have been saved successfully.<br />Note that your enviroment / docker startup file may override these settings on application restart if you have set them there.');
 		fetchStatus();
 	};
 
@@ -209,25 +209,47 @@ export default function Dashboard() {
 			/>
 			<div className="container mx-auto p-4">
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+					{/* Current Bitaxe Status */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
+						{/* Communication error alert */}
 						{status?.bitaxeReachable === false && (
 							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
-								⚠️ Communication Error - Unable to connect to Bitaxe<br />
-								<span className="text-sm font-normal">{status.bitaxeError}</span>
+								<strong className="text-lg">⚠️ Communication Error - Unable to connect to Bitaxe</strong>
+								<br /><span className="text-sm font-normal">{status.bitaxeError}</span>
 							</div>
 						)}
+
+						{/* Hashrate warning alert */}
+						{current && status?.bitaxeReachable !== false && current.avgHashRate < (current.expectedHashrate*95/100.0) && (
+							<div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
+								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
+								<br />
+								Your average hash rate ({(current.avgHashRate/1000.0).toFixed(3)}TH/s) 
+								is {(100.0*current.avgHashRate/current.expectedHashrate).toFixed(1)}% 
+								of expected hash rate ({(current.expectedHashrate/1000.0).toFixed(3)}TH/s). 
+								<br /><br />
+								This may indicate that the device is not stable at the current settings. 
+								Consider increasing the core voltage or lowering the max frequency to improve stability and achieve the expected hash rate.
+								<br /><br />
+								Aim is to keep the step value close to 0 at the ambient room temp to ensure the device is running as efficiently as possible while maintaining stability.
+							</div>
+						)}
+
+						{/* Overheat alert */}
 						{current?.overheatMode && status?.bitaxeReachable !== false && (
 							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
-								⚠️ Currently In Overheat Mode. Will need reset.
+								<strong className="text-lg">⚠️ Bitaxe has overheated</strong>
+								<br />You will need to manually reset the device to clear this error.
 							</div>
 						)}
 						{current && status?.bitaxeReachable !== false ? (
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
-									<div className="text-xl font-bold dark:text-white">{(current.hashRate / 1000).toFixed(3)} TH/s</div>
-									<div className="text-xs text-gray-400">Expected: {(current.expectedHashrate / 1000).toFixed(3)} TH/s</div>
+									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} TH/s</div>
+									<div className="text-xs text-gray-400 text-right">Expected: {(current.expectedHashrate / 1000).toFixed(3)} TH/s</div>
+									<div className="text-xs text-gray-400 text-right ${current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}">Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">ASIC Temp</div>
@@ -272,9 +294,11 @@ export default function Dashboard() {
 						) : (
 							<div className="text-gray-500">No data available</div>
 						)}
+
+						{/* Low step warning alert */}
 						{status?.showLowStepWarning && (
 							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
-								⚠️ <strong>Cannot attain the desired maximum frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
+								<strong className="text-lg">⚠️ Cannot attain the desired maximum frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<br />
 								<br />
 								Consider lowering this value so that it is holding closer to 0 at the ambient room temp. 
@@ -284,6 +308,7 @@ export default function Dashboard() {
 						)}
 					</div>
 
+					{/* Stabiliser Control */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">
 							Stabiliser {status?.stabilise ? 'ON' : 'OFF'}
@@ -325,6 +350,7 @@ export default function Dashboard() {
 						</div>
 					</div>
 
+					{/* Manual Control and Settings Form */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
 						<div className="flex flex-wrap gap-4 mb-4">
@@ -434,6 +460,7 @@ export default function Dashboard() {
 					</div>
 				</div>
 
+				{/* Graph panel */}
 				{graphData.length > 0 && (
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
 						<div className="flex justify-between items-center mb-4">
@@ -475,7 +502,7 @@ export default function Dashboard() {
 						</div>
 						<div className="h-80">
 							<ResponsiveContainer width="100%" height="100%">
-								<ComposedChart data={graphData} margin={{ top: 5, right: 80, left: 20, bottom: 5 }}>
+								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
 									<XAxis
 										dataKey="timestamp"
@@ -488,16 +515,16 @@ export default function Dashboard() {
 										domain={getHashrateDomain}
 										stroke="#8884d8"
 										tick={{ fontSize: 12 }}
-										label={{ value: 'TH/s', angle: -90, position: 'insideLeft', fill: '#8884d8' }}
+										label={{ value: 'TH/s', angle: -90, position: 'left', offset: 0, fill: '#8884d8' }}
 									/>
 									<YAxis
 										yAxisId="temp"
 										orientation="right"
 										domain={getTempDomain}
-										stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
-										tick={{ fontSize: 12 }}
+										stroke="#ef4444"
+										tick={{ fontSize: 12, fill: '#ef4444' }}
 										tickFormatter={(value) => Math.round(value).toString()}
-										label={{ value: '°C', angle: 90, position: 'insideRight', fill: isDarkMode ? '#9ca3af' : '#6b7280' }}
+										label={{ value: '°C', angle: 0, position: 'right', offset: -35, fill: '#ef4444' }}
 									/>
 									<YAxis
 										yAxisId="step"
@@ -505,6 +532,7 @@ export default function Dashboard() {
 										domain={[0, 'auto']}
 										stroke="#22c55e"
 										tick={{ fontSize: 12 }}
+										label={{ value: 'Step', angle: 90, position: 'right', offset: -30, fill: '#22c55e' }}
 									/>
 									<Tooltip
 										contentStyle={{
@@ -525,6 +553,7 @@ export default function Dashboard() {
 					</div>
 				)}
 
+				{/* Historical Data Table */}
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
 					<h2 className="text-lg font-semibold mb-4 dark:text-white">{status?.history && status.history.length ? 'Last '+status.history.length+' Readings' : "No Historical data"}</h2>
 					<div className="overflow-x-auto">
@@ -548,7 +577,7 @@ export default function Dashboard() {
 									[...status.history].reverse().slice(0, 10).map((h, i) => {
 										const prev = i < 9 && status.history.length > i + 1 ? [...status.history].reverse()[i + 1] : null;
 										return (
-											<tr key={h.timestamp} className={`border-b dark:border-gray-700 ${i === 0 ? 'bg-yellow-50 dark:bg-yellow-900 font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+											<tr key={h.timestamp} className={`border-b dark:border-gray-700 ${i === 0 ? 'bg-yellow-50 dark:bg-gray-700 font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
 												<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
 												<td className="p-2 text-right dark:text-white">{(h.hashRate / 1000).toFixed(3)}</td>
 												<td className={`p-2 text-right ${getTempColor(h.toExpected, 0)}`}>{h.toExpected.toFixed(1)}%</td>
