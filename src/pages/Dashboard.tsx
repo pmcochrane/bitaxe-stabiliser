@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
-import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
 import { logUi } from '../utils/logger';
 
@@ -293,6 +293,15 @@ export default function Dashboard() {
 		}
 		const padding = max * 0.1;
 		return [0, max + padding];
+	}, [graphData]);
+
+	const getAverageHashrate = useMemo((): number => {
+		if (graphData.length === 0) return 0;
+		let sum = 0;
+		for (const d of graphData) {
+			sum += d.hashRate;
+		}
+		return sum / graphData.length;
 	}, [graphData]);
 
 	const getTempDomain = useMemo((): [number, number] => {
@@ -605,23 +614,25 @@ export default function Dashboard() {
 									Max Freq -
 								</button>
 							</div>
-							<button
-								onClick={handleToggleSweep}
-								className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 self-start"
-							>
-								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
-							</button>
-							<button
-								onClick={handleResetData}
-								className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 self-start"
-							>
-								Clear Historical Data
-							</button>
+							<div className="flex flex-col gap-2">
+								<button
+									onClick={handleToggleSweep}
+									className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
+								>
+									{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
+								</button>
+								<button
+									onClick={handleResetData}
+									className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90"
+								>
+									Clear Historical Data
+								</button>
+							</div>
 						</div>
 
-						<form onSubmit={handleSettingsSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-							<div>
-								<label className="block text-sm font-medium dark:text-white">Target ASIC Temp</label>
+						<form onSubmit={handleSettingsSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-2">
+							<div className="w-full">
+								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Target ASIC (°C)</label>
 								<input
 									type="number"
 									value={settingsForm.targetAsic}
@@ -630,8 +641,8 @@ export default function Dashboard() {
 									step={1}
 								/>
 							</div>
-							<div>
-								<label className="block text-sm font-medium dark:text-white">Max VR Temp</label>
+							<div className="w-full">
+								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Max VR (°C)</label>
 								<input
 									type="number"
 									value={settingsForm.maxVr}
@@ -640,8 +651,8 @@ export default function Dashboard() {
 									step={1}
 								/>
 							</div>
-							<div>
-								<label className="block text-sm font-medium dark:text-white">Core Voltage (mV)</label>
+							<div className="w-full">
+								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Voltage (mV)</label>
 								<input
 									type="number"
 									value={settingsForm.coreVoltage}
@@ -650,8 +661,8 @@ export default function Dashboard() {
 									step={5}
 								/>
 							</div>
-							<div>
-								<label className="block text-sm font-medium dark:text-white">Max Freq (MHz)</label>
+							<div className="w-full">
+								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Max Freq (MHz)</label>
 								<input
 									type="number"
 									value={settingsForm.maxFreq}
@@ -660,9 +671,9 @@ export default function Dashboard() {
 									step={0.5}
 								/>
 							</div>
-							<div className="md:col-span-4 flex justify-end">
+							<div className="md:col-span-1 flex items-end justify-end">
 								<button type="submit" className="px-4 py-2 bg-indigo-500 text-white rounded hover:opacity-90">
-									Save Settings
+									Save
 								</button>
 							</div>
 						</form>
@@ -709,7 +720,7 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</div>
-						<div className="h-80">
+						<div className="h-[480px]">
 							<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
@@ -724,6 +735,7 @@ export default function Dashboard() {
 										domain={getHashrateDomain}
 										stroke="#8884d8"
 										tick={{ fontSize: 12 }}
+										tickFormatter={(value) => value.toFixed(3)}
 										label={{ value: 'TH/s', angle: -90, position: 'left', offset: 0, fill: '#8884d8' }}
 									/>
 									<YAxis
@@ -754,6 +766,7 @@ export default function Dashboard() {
 									/>
 									<Legend />
 									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} />
+									<ReferenceLine yAxisId="hashrate" y={getAverageHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Average Hash Rate:'+getAverageHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />
 									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} />
 									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
 									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />

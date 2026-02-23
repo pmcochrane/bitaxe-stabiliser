@@ -23,6 +23,6 @@ export function logClient(message: string): void {
 }
 
 export function logUi(...args: unknown[]): void {
-	console.log(...args);
+	// console.log(...args);
 }
 
