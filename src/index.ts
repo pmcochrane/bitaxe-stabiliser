@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
@@ -151,6 +152,7 @@ async function main() {
 	const monitor = new MonitorService(settings, store);
 
 	const app = express();
+	app.use(compression());
 	app.use(express.json());
 
 	app.use('/api', createApiRouter(monitor, store));

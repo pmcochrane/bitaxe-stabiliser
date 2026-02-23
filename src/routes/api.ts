@@ -11,7 +11,7 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		const history = store.getLastNHistory(10);
 		const state = monitor.getState();
 		const settings = monitor.getSettings();
-		const events = store.getEvents();
+		const events = store.getEvents(10);
 
 		const latest = history[history.length - 1] || null;
 		
@@ -125,7 +125,8 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 	router.get('/history/graph', (req: Request, res: Response) => {
 		const hours = parseInt(req.query.hours as string) || 24;
-		const history = store.getHistorySince(hours);
+		const since = req.query.since as string | undefined;
+		const history = store.getHistorySince(hours, since);
 		res.json(history);
 	});
 

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
+import { logUi } from '../utils/logger';
 
 interface GraphDataEntry {
 	timestamp: string;
@@ -42,37 +43,144 @@ export default function Dashboard() {
 		return () => observer.disconnect();
 	}, []);
 
-	const fetchGraphData = useCallback(async () => {
-		try {
-			const data = await getHistoryGraph(graphHours);
-			const transformed: GraphDataEntry[] = data.map(d => ({
-				timestamp: d.timestamp,
-				hashRate: Math.round((d.hashRate / 1000) * 1000) / 1000,
-				temp: d.temp,
-				vrTemp: d.vrTemp,
-				stepDown: d.stepDown,
-				stepDownFilled: d.stepDown,
-			}));
-			setGraphData(transformed);
-		} catch (error) {
-			console.error('Failed to fetch graph data:', error);
-		}
-	}, [graphHours]);
+	const GRAPH_STORAGE_KEY = 'bitaxe_graph_data';
+	const MAX_GRAPH_AGE_HOURS = 48;
 
-	const fetchStatus = useCallback(async () => {
+	const cropOldEntries = useCallback((data: GraphDataEntry[]): GraphDataEntry[] => {
+		if (data.length === 0) return [];
+		const cutoffTime = new Date();
+		cutoffTime.setHours(cutoffTime.getHours() - MAX_GRAPH_AGE_HOURS);
+		return data.filter(entry => new Date(entry.timestamp) > cutoffTime);
+	}, []);
+
+	const loadCachedGraphData = useCallback((hours: number): GraphDataEntry[] => {
 		try {
-			const data = await getStatus();
-			setStatus(data);
-			if (initialLoad) {
-				setSettingsForm(data.settings);
-				setInitialLoad(false);
+			const cached = localStorage.getItem(GRAPH_STORAGE_KEY);
+			if (cached) {
+				const allData: GraphDataEntry[] = JSON.parse(cached);
+				const cutoffTime = new Date();
+				cutoffTime.setHours(cutoffTime.getHours() - hours);
+				const filtered = allData.filter(entry => new Date(entry.timestamp) > cutoffTime);
+				return filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 			}
 		} catch (error) {
-			console.error('Failed to fetch status:', error);
-		} finally {
-			setLoading(false);
+			console.error('Failed to load cached graph data:', error);
 		}
-	}, [initialLoad]);
+		return [];
+	}, []);
+
+	const saveGraphDataToCache = useCallback((data: GraphDataEntry[]) => {
+		try {
+			const cropped = cropOldEntries(data);
+			localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(cropped));
+		} catch (error) {
+			console.error('Failed to save graph data to cache:', error);
+		}
+	}, [cropOldEntries]);
+
+	const clearGraphDataCache = useCallback(() => {
+		try {
+			localStorage.removeItem(GRAPH_STORAGE_KEY);
+		} catch (error) {
+			console.error('Failed to clear graph data cache:', error);
+		}
+	}, []);
+
+	const graphDataRef = useRef<GraphDataEntry[]>([]);
+	graphDataRef.current = graphData;
+
+	const isApiInProgress = useRef(false);
+	const fetchStatusCounter = useRef(0);
+	const withApiLock = useCallback(async (fn: () => Promise<void>): Promise<void> => {
+		while (isApiInProgress.current) {
+			await new Promise(resolve => setTimeout(resolve, 10));
+		}
+		isApiInProgress.current = true;
+		try {
+			await fn();
+		} finally {
+			isApiInProgress.current = false;
+		}
+	}, []);
+
+	const fetchGraphData = useCallback(async () => {
+		await withApiLock(async () => {
+			const randomId = Math.floor(Math.random() * 9000) + 1000;
+			const logPrefix = "[useCallback][fetchGraphData]["+randomId+"]";
+			const startTime = performance.now();
+			logUi(logPrefix, 'Fetching graph data for last', graphHours, 'hours...');
+			try {
+				const cachedData = graphDataRef.current.length > 0 ? graphDataRef.current : loadCachedGraphData(graphHours);
+				const latestTimestamp = cachedData.length > 0 
+					? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
+						new Date(entry.timestamp) > new Date(latest) ? entry.timestamp : latest, cachedData[0].timestamp)
+					: undefined;
+
+				const data = await getHistoryGraph(graphHours, latestTimestamp);
+				
+				if (data.length === 0) {
+					logUi(logPrefix, 'No new data - using cache');
+					if (cachedData.length > 0) {
+						setGraphData(cachedData);
+					}
+					return;
+				}
+
+				const transformed: GraphDataEntry[] = data.map(d => ({
+					timestamp: d.timestamp,
+					hashRate: Math.round((d.hashRate / 1000) * 1000) / 1000,
+					temp: d.temp,
+					vrTemp: d.vrTemp,
+					stepDown: d.stepDown,
+					stepDownFilled: d.stepDown,
+				}));
+
+				let mergedData: GraphDataEntry[];
+				if (cachedData.length === 0) {
+					mergedData = transformed;
+				} else {
+					const existingTimestamps = new Set(cachedData.map((d: GraphDataEntry) => d.timestamp));
+					const newEntries = transformed.filter((d: GraphDataEntry) => !existingTimestamps.has(d.timestamp));
+					mergedData = [...cachedData, ...newEntries].sort((a, b) => 
+						new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+					);
+				}
+
+				saveGraphDataToCache(mergedData);
+				setGraphData(mergedData);
+				logUi(logPrefix, graphHours+"h chart:", 'Received:', data.length, 'Total:', mergedData.length, 'Since:', latestTimestamp || 'beginning', `[took ${Math.round(performance.now() - startTime)}ms]`);
+			} catch (error) {
+				logUi(logPrefix, 'Failed to fetch graph data:', error);
+			}
+		});
+	}, [graphHours, loadCachedGraphData, saveGraphDataToCache, withApiLock]);
+
+	const fetchStatus = useCallback(async () => {
+		await withApiLock(async () => {
+			const randomId = Math.floor(Math.random() * 9000) + 1000;
+			const logPrefix = "[useCallback][fetchStatus]["+randomId+"]";
+			const startTime = performance.now();
+			logUi(logPrefix, 'Fetching status...'); 
+			fetchStatusCounter.current++;
+			const shouldFetchGraph = fetchStatusCounter.current % 4 === 0;
+			try {
+				const data = await getStatus();
+				setStatus(data);
+				if (initialLoad) {
+					setSettingsForm(data.settings);
+					setInitialLoad(false);
+				}
+				logUi(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
+				if (shouldFetchGraph) {
+					fetchGraphData();
+				}
+			} catch (error) {
+				logUi(logPrefix, 'Failed to fetch status:', error);
+			} finally {
+				setLoading(false);
+			}
+		});
+	}, [initialLoad, withApiLock, fetchGraphData]);
 
 	useEffect(() => {
 		const handleVisibilityChange = () => {
@@ -83,18 +191,24 @@ export default function Dashboard() {
 	}, []);
 
 	useEffect(() => {
-		fetchGraphData();
-		if (isPageVisible) {
-			const interval = setInterval(fetchGraphData, 10000);
-			return () => clearInterval(interval);
+		const logPrefix="[loadCachedGraphData]";
+		const startTime = performance.now();
+		const cachedData = loadCachedGraphData(graphHours);
+		if (cachedData.length > 0) {
+			setGraphData(cachedData);
 		}
-	}, [fetchGraphData, isPageVisible]);
+		console.log(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
+	}, [graphHours, loadCachedGraphData]);
+
+	useEffect(() => {
+		fetchGraphData();
+	}, [fetchGraphData]);
 
 	useEffect(() => {
 		fetchStatus();
 		const interval = setInterval(fetchStatus, 3000);
 		return () => clearInterval(interval);
-	}, [fetchStatus]);
+	}, [fetchStatus, isPageVisible]);
 
 	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
@@ -113,12 +227,6 @@ export default function Dashboard() {
 		const padding = (max - min) * 0.1;
 		return [Math.max(0, min - padding), max + padding];
 	}, [graphData]);
-
-	useEffect(() => {
-		fetchGraphData();
-		const interval = setInterval(fetchGraphData, 30000);
-		return () => clearInterval(interval);
-	}, [fetchGraphData, isPageVisible]);
 
 	const handleToggleStabilise = async () => {
 		if (!status) return;
@@ -156,6 +264,8 @@ export default function Dashboard() {
 		);
 		if (confirmed) {
 			sendControl({ action: 'resetData' });
+			clearGraphDataCache();
+			setGraphData([]);
 			setTimeout(fetchStatus, 100);
 			setTimeout(fetchGraphData, 200);
 		}

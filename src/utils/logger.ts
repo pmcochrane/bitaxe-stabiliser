@@ -22,3 +22,7 @@ export function logClient(message: string): void {
 	log(`[client.ts] ${message}`);
 }
 
+export function logUi(...args: unknown[]): void {
+	console.log(...args);
+}
+

@@ -126,10 +126,17 @@ export class DataStore {
 		return this.data.history.slice(-n);
 	}
 
-	getHistorySince(hoursAgo: number): HistoryEntry[] {
-		const cutoff = new Date();
-		cutoff.setHours(cutoff.getHours() - hoursAgo);
-		const cutoffTime = cutoff.getTime();
+	getHistorySince(hoursAgo: number, since?: string): HistoryEntry[] {
+		let cutoffTime: number;
+		
+		if (since) {
+			cutoffTime = new Date(since).getTime();
+		} else {
+			const cutoff = new Date();
+			cutoff.setHours(cutoff.getHours() - hoursAgo);
+			cutoffTime = cutoff.getTime();
+		}
+		
 		return this.data.history.filter((entry) => new Date(entry.timestamp).getTime() >= cutoffTime);
 	}
 
@@ -237,8 +244,8 @@ export class DataStore {
 		this.saveEvents();
 	}
 
-	getEvents(): StoreEvent[] {
-		return [...this.data.events].reverse().slice(0, 100);
+	getEvents(limit: number = 100): StoreEvent[] {
+		return [...this.data.events].reverse().slice(0, limit);
 	}
 
 	private saveEvents(): void {
