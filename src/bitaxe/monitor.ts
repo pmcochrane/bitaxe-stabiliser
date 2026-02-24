@@ -16,7 +16,6 @@ export class MonitorService {
 	private asicTemps: number[] = [];
 	private vrTemps: number[] = [];
 
-	private stepDownDefault = 0;
 	private maxStepUp = 0;
 	private secondsBetweenPasses = 1;
 	private stepUpEveryXPasses = 3; // actually 4
@@ -50,7 +49,7 @@ export class MonitorService {
 			running: false,
 			stabilise: true,
 			sweepMode: false,
-			stepDown: this.stepDownDefault,
+			stepDown: settings.stepDownDefault ?? -10,
 			stepUpCounter: this.stepUpEveryXPasses,
 			stepDownCounter: this.stepDownEveryXPasses,
 			stabilisedCounter: this.stabilisedCounterDefault,
@@ -98,7 +97,7 @@ export class MonitorService {
 
 		this.state.running = true;
 		this.applyChange = true;
-		this.state.stepDown = this.stepDownDefault;
+		this.state.stepDown = this.settings.stepDownDefault ?? -10;
 		this.state.stabilisedCounter = this.stabilisedCounterDefault;
 		this.state.reachedInitialTemp = false;
 		this.asicTemps = [];

@@ -28,6 +28,7 @@ export default function Dashboard() {
 		maxHistoryEntries: 172800,
 		lowStepAnalyseRange: 50,
 		lowStepWarningThreshold: -10,
+		stepDownDefault: -10,
 	});
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [graphHours, setGraphHours] = useState(2);

@@ -28,6 +28,7 @@ const TARGET_ASIC = process.env.TARGET_ASIC ? parseFloat(process.env.TARGET_ASIC
 const MAX_VR = process.env.MAX_VR ? parseFloat(process.env.MAX_VR) : undefined;
 const CORE_VOLTAGE = process.env.CORE_VOLTAGE ? parseInt(process.env.CORE_VOLTAGE) : undefined;
 const MAX_FREQ = process.env.MAX_FREQ ? parseFloat(process.env.MAX_FREQ) : undefined;
+const STEP_DOWN_DEFAULT = process.env.STEP_DOWN_DEFAULT ? parseInt(process.env.STEP_DOWN_DEFAULT) : undefined;
 const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(process.env.LOW_STEP_ANALYSE_RANGE) : undefined;
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 
@@ -160,6 +161,17 @@ async function initializeSettings() {
 	} else {
 		settings.lowStepWarningThreshold = -10;
 		logIndex(`[default] lowStepWarningThreshold: ${settings.lowStepWarningThreshold}`);
+	}
+
+	// get stepDownDefault from env, then settings file, then default to -10
+	if (STEP_DOWN_DEFAULT !== undefined) {
+		settings.stepDownDefault = STEP_DOWN_DEFAULT;
+		logIndex(`[env] stepDownDefault: ${settings.stepDownDefault}`);
+	} else if (settings.stepDownDefault !== undefined) {
+		logIndex(`[settings.json] stepDownDefault: ${settings.stepDownDefault}`);
+	} else {
+		settings.stepDownDefault = -10;
+		logIndex(`[default] stepDownDefault: ${settings.stepDownDefault}`);
 	}
 
 	store.saveSettings(settings);

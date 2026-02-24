@@ -65,6 +65,7 @@ export class DataStore {
 			maxHistoryEntries: 172800,
 			lowStepAnalyseRange: 50,
 			lowStepWarningThreshold: -10,
+			stepDownDefault: -10,
 		};
 	}
 

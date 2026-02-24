@@ -1,21 +1,21 @@
 services:
-  bitaxe-stabiliser-g1:
-    build:
-      context: .
-    ports:
-      - "${PORT:-3001}:3000"
-    environment:
-      - BITAXE_IP=${BITAXE_IP_1}
-      # - BITAXE_HOSTNAME=${BITAXE_HOSTNAME:-}
-      # - PORT=${PORT:-3000}
-      # - HISTORY_LIMIT=${HISTORY_LIMIT:-172800}
-      # - TARGET_ASIC=${TARGET_ASIC:-65}
-      # - MAX_VR=${MAX_VR:-80}
-      # - CORE_VOLTAGE=${CORE_VOLTAGE:-1150}
-      # - MAX_FREQ=${MAX_FREQ:-525.0}
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
+  # bitaxe-stabiliser-g1:
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "${PORT:-3001}:3000"
+  #   environment:
+  #     - BITAXE_IP=${BITAXE_IP_1}
+  #     # - BITAXE_HOSTNAME=${BITAXE_HOSTNAME:-}
+  #     # - PORT=${PORT:-3000}
+  #     # - HISTORY_LIMIT=${HISTORY_LIMIT:-172800}
+  #     # - TARGET_ASIC=${TARGET_ASIC:-65}
+  #     # - MAX_VR=${MAX_VR:-80}
+  #     # - CORE_VOLTAGE=${CORE_VOLTAGE:-1150}
+  #     # - MAX_FREQ=${MAX_FREQ:-525.0}
+  #   volumes:
+  #     - ./data:/app/data
+  #   restart: unless-stopped
 
   bitaxe-stabiliser-g2:
     build:
@@ -24,6 +24,7 @@ services:
       - "${PORT:-3002}:3000"
     environment:
       - BITAXE_IP=${BITAXE_IP_2}
+      - STEP_DOWN_DEFAULT=${STEP_DOWN_DEFAULT:- -10}
       # - BITAXE_HOSTNAME=${BITAXE_HOSTNAME:-}
       # - PORT=${PORT:-3000}
       # - HISTORY_LIMIT=${HISTORY_LIMIT:-172800}

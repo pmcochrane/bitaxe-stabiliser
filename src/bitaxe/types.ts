@@ -44,6 +44,7 @@ export interface Settings {
 	maxHistoryEntries: number;
 	lowStepAnalyseRange: number;
 	lowStepWarningThreshold: number;
+	stepDownDefault: number;
 }
 
 export interface HistoryEntry {
