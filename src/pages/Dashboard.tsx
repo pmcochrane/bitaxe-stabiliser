@@ -3,6 +3,7 @@ import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAn
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
+import { AnimatedBanner } from '../components/AnimatedBanner';
 import { logUi } from '../utils/logger';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
 
@@ -452,8 +453,8 @@ export default function Dashboard() {
 				onConfirm={modalState.onConfirm}
 				onCancel={closeModal}
 			/>
-			{showDisclaimer && (
-				<div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-500 text-yellow-800 dark:text-yellow-200 rounded">
+			<AnimatedBanner show={showDisclaimer} className="mb-4">
+				<div className="p-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-500 text-yellow-800 dark:text-yellow-200 rounded">
 					<div className="flex items-start justify-between">
 						<div>
 							<strong className="text-lg">Disclaimer - Use at Own Risk</strong>
@@ -474,15 +475,15 @@ export default function Dashboard() {
 						</button>
 					</div>
 				</div>
-			)}
+			</AnimatedBanner>
 			<div className="container mx-auto p-4">
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 					{/* Current Bitaxe Status */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
 						{/* Communication error alert */}
-						{status?.bitaxeReachable===false && (
-							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
+						<AnimatedBanner show={!!(status?.bitaxeReachable===false)} className="mb-4">
+							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
 								<strong>⚠️ Bitaxe is not Responding</strong>
 								<br />
 								The application is currently unable to communicate with your Bitaxe device on {status?.settings?.ip}. 
@@ -493,33 +494,33 @@ export default function Dashboard() {
 									<li>Network connectivity issues (check cables, Wi-Fi, etc.)</li>
 								</ul>
 								<br />The error reported is: <br />
-								<span className="text-sm font-normal">{status.bitaxeError}</span>
+								<span className="text-sm font-normal">{status?.bitaxeError}</span>
 							</div>
-						)}
+						</AnimatedBanner>
 
 						{/* Hashrate warning alert */}
-						{current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0) && (
-							<div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
+						<AnimatedBanner show={!!(current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0))} className="mb-4">
+							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
-								Your average hash rate ({(current.avgHashRate/1000.0).toFixed(3)}TH/s) 
-								is {(100.0*current.avgHashRate/current.expectedHashrate).toFixed(1)}% 
-								of expected hash rate ({(current.expectedHashrate/1000.0).toFixed(3)}TH/s). 
+								Your average hash rate ({current ? (current.avgHashRate/1000.0).toFixed(3) : '0'}TH/s) 
+								is {current ? (100.0*current.avgHashRate/current.expectedHashrate).toFixed(1) : '0'}% 
+								of expected hash rate ({current ? (current.expectedHashrate/1000.0).toFixed(3) : '0'}TH/s). 
 								<br /><br />
 								This may indicate that the device is not stable at the current settings. 
 								Consider increasing the core voltage or lowering the max frequency to improve stability and achieve the expected hash rate.
 								<br /><br />
 								Aim is to keep the step value close to 0 at the ambient room temp to ensure the device is running as efficiently as possible while maintaining stability.
 							</div>
-						)}
+						</AnimatedBanner>
 
 						{/* Overheat alert */}
-						{current?.overheatMode && status?.bitaxeReachable !== false && (
-							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
+						<AnimatedBanner show={current?.overheatMode && status?.bitaxeReachable !== false} className="mb-4">
+							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
 								<strong className="text-lg">⚠️ Bitaxe has overheated</strong>
 								<br />You will need to manually reset the device to clear this error.
 							</div>
-						)}
+						</AnimatedBanner>
 						{current && status?.bitaxeReachable !== false ? (
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 								<div>
@@ -588,8 +589,8 @@ export default function Dashboard() {
 						)}
 
 						{/* Low step warning alert */}
-						{status?.showLowStepWarning && !status?.sweepMode && (
-							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
+						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode} className="mt-3">
+							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Failing to attain the desired frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<ul className="list-disc ml-5 mt-2 text-sm">
 									<li>Consider lowering the max frequency so that step can hold closer to 0 at the ambient room temperature.</li>
@@ -598,7 +599,7 @@ export default function Dashboard() {
 									<li>Step permanently lowering over time may indicate a cooling issue with the device or a significant change to ambient room temperature.</li>
 								</ul>
 							</div>
-						)}
+						</AnimatedBanner>
 					</div>
 
 					{/* Stabiliser Control */}
