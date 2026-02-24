@@ -584,9 +584,9 @@ export default function Dashboard() {
 								</div>
 							</div>
 						) : status?.bitaxeReachable === false ? (
-							<div className="text-gray-500">Waiting for bitaxe to respond on {status.settings.ip}...</div>
+							<div className="text-gray-500 dark:text-white">Waiting for bitaxe to respond on {status.settings.ip}...</div>
 						) : (
-							<div className="text-gray-500">No data available</div>
+							<div className="text-gray-500 dark:text-white">No data available</div>
 						)}
 
 						{/* Low step warning alert */}
