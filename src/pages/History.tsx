@@ -2,14 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getHistory, getHistoryPages, getSettings } from '../services/api';
 import type { HistoryEntry, HistoryResponse, Settings } from '../types';
 import { Modal, useModal } from '../components/Modal';
+import { getTempColor, getToExpectedColor } from '../utils/colors';
 
 export default function History() {
-	const getToExpectedColor = (value: number) => {
-		if (value >= 0) return 'text-green-600 dark:text-green-400';
-		if (value < -5) return 'text-red-600 dark:text-red-400';
-		return 'text-amber-500 dark:text-amber-400';
-	};
-
 	const [data, setData] = useState<HistoryEntry[]>([]);
 	const [page, setPage] = useState(1);
 	const [rowsPerPage, setRowsPerPage] = useState(50);
@@ -54,12 +49,6 @@ export default function History() {
 			setPage(newPage);
 			setSliderTooltip(null);
 		}, 500);
-	};
-
-	const getTempColor = (temp: number, target: number) => {
-		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
-		if (temp < target - 1) return 'text-blue-900 dark:text-blue-400';
-		return 'text-green-600 dark:text-green-400';
 	};
 
 	const fetchHistory = async () => {

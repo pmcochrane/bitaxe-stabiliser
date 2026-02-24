@@ -4,6 +4,7 @@ import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
 import { logUi } from '../utils/logger';
+import { getTempColor, getToExpectedColor } from '../utils/colors';
 
 interface GraphDataEntry {
 	timestamp: string;
@@ -407,18 +408,6 @@ export default function Dashboard() {
 		updateSettings(settingsForm);
 		await showAlert('Settings Saved', 'Your settings have been saved successfully.<br />Note that your enviroment / docker startup file may override these settings on application restart if you have set them there.');
 		fetchStatus();
-	};
-
-	const getTempColor = (temp: number, target: number) => {
-		if (temp > target + 1) return 'text-red-600 dark:text-red-400';
-		if (temp < target - 1) return 'text-blue-900 dark:text-blue-400';
-		return 'text-green-600 dark:text-green-400';
-	};
-
-	const getToExpectedColor = (value: number) => {
-		if (value >= 0) return 'text-green-600 dark:text-green-400';
-		if (value < -5) return 'text-red-600 dark:text-red-400';
-		return 'text-amber-500 dark:text-amber-400';
 	};
 
 	const isValueChanged = (formValue: number, storedValue: number | undefined) => {
