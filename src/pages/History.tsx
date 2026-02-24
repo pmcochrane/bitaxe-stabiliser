@@ -4,6 +4,12 @@ import type { HistoryEntry, HistoryResponse, Settings } from '../types';
 import { Modal, useModal } from '../components/Modal';
 
 export default function History() {
+	const getToExpectedColor = (value: number) => {
+		if (value >= 0) return 'text-green-600 dark:text-green-400';
+		if (value < -5) return 'text-red-600 dark:text-red-400';
+		return 'text-amber-500 dark:text-amber-400';
+	};
+
 	const [data, setData] = useState<HistoryEntry[]>([]);
 	const [page, setPage] = useState(1);
 	const [rowsPerPage, setRowsPerPage] = useState(50);
@@ -264,7 +270,7 @@ export default function History() {
 									<tr key={i} className="border-b hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-600">
 										<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
 										<td className="p-2 text-right dark:text-white">{(h.hashRate / 1000).toFixed(3)}</td>
-										<td className={`p-2 text-right ${getTempColor(h.toExpected, 0)}`}>{h.toExpected.toFixed(1)}%</td>
+										<td className={`p-2 text-right ${getToExpectedColor(h.toExpected)}`}>{h.toExpected.toFixed(1)}%</td>
 										<td className={`p-2 text-right ${getTempColor(h.temp, settings.targetAsic)}`}>{h.temp.toFixed(3)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.vrTemp, settings.maxVr)}`}>{h.vrTemp}</td>
 										<td className="p-2 text-right dark:text-white">{h.coreVoltage.toFixed(1)}</td>

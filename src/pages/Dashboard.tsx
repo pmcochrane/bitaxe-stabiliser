@@ -415,6 +415,12 @@ export default function Dashboard() {
 		return 'text-green-600 dark:text-green-400';
 	};
 
+	const getToExpectedColor = (value: number) => {
+		if (value >= 0) return 'text-green-600 dark:text-green-400';
+		if (value < -5) return 'text-red-600 dark:text-red-400';
+		return 'text-amber-500 dark:text-amber-400';
+	};
+
 	const isValueChanged = (formValue: number, storedValue: number | undefined) => {
 		if (storedValue === undefined) return false;
 		return formValue !== storedValue;
@@ -489,6 +495,9 @@ export default function Dashboard() {
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
 									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} TH/s</div>
+									<div className={`text-xs text-right ${getToExpectedColor(current.toExpected)}`}>
+										To Expected: {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
+									</div>
 									<div className="text-xs text-gray-400 text-right">Expected: {(current.expectedHashrate / 1000).toFixed(3)} TH/s</div>
 									<div className="text-xs text-gray-400 text-right ${current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}">Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s</div>
 								</div>
@@ -520,15 +529,20 @@ export default function Dashboard() {
 									)}
 								</div>
 								<div>
-									<div className="text-sm text-gray-500 dark:text-gray-400">Frequency</div>
+									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Reduced by ${Math.abs(current.stepDown * 6.25).toFixed(2)} MHz`}>Frequency</div>
 									<div className="text-xl font-bold dark:text-white">{current.frequency} MHz</div>
-									<div className={`text-sm ${current.frequency > settingsForm.maxFreq ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+									<div className={`text-sm ${current.frequency > settingsForm.maxFreq ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}
+										title={`Step at ${current.stepDown} forces a reduction of ${Math.abs(current.stepDown * 6.25).toFixed(2)} MHz`}>
 										{current.frequency > settingsForm.maxFreq ? '↑ +' : '↓ -'}{Math.abs(current.frequency - settingsForm.maxFreq).toFixed(2)} MHz
 									</div>
 								</div>
 								<div>
-									<div className="text-sm text-gray-500 dark:text-gray-400">Core Voltage</div>
+									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Offset: ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>Core Voltage</div>
 									<div className="text-xl font-bold dark:text-white">{current.coreVoltage.toFixed(1)} mV</div>
+									<div className={`text-sm ${current.coreVoltage < settingsForm.coreVoltage ? 'text-amber-600 dark:text-amber-400' : current.coreVoltage > settingsForm.coreVoltage ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
+											title={`Step at ${current.stepDown} forces an offset of ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>
+										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}{Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)} mV
+									</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Efficiency</div>
@@ -955,7 +969,7 @@ export default function Dashboard() {
 											<tr key={h.timestamp} className={`border-b dark:border-gray-700 ${i === 0 ? 'bg-yellow-50 dark:bg-gray-700 font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
 												<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
 												<td className="p-2 text-right dark:text-white">{(h.hashRate / 1000).toFixed(3)}</td>
-												<td className={`p-2 text-right ${getTempColor(h.toExpected, 0)}`}>{h.toExpected.toFixed(1)}%</td>
+												<td className={`p-2 text-right ${getToExpectedColor(h.toExpected)}`}>{h.toExpected.toFixed(1)}%</td>
 												<td className={`p-2 text-right ${getTempColor(h.temp, settingsForm.targetAsic)}`}>{h.temp.toFixed(3)}</td>
 												<td className={`p-2 text-right ${getTempColor(h.vrTemp, settingsForm.maxVr)}`}>{h.vrTemp}</td>
 												<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage.toFixed(1)}</td>
