@@ -3,7 +3,9 @@
 Guidelines for agentic coding agents operating in this repository.
 
 ---
-After any build, inform the user if the dev server needs restarted if any source file outwith the react app is changed.
+## Thinking
+- Please try and plan what will be changed and ask the user to preceed before implementing changes. Feel free to create a subagent to help with planning the change
+- After any build, inform the user if the dev server needs restarted if any source file outwith the react app is changed.
 
 ## Build, Lint, and Test Commands
 
