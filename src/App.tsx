@@ -64,7 +64,6 @@ function App() {
 								</a>
 							)}
 							{isDev && <span className="ml-2 px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV</span>}
-							{!isDev && <span className="ml-2 px-2 py-1 text-xs font-bold bg-green-600 text-white rounded">PROD</span>}
 						</h1>
 					</div>
 					<div className="flex items-center gap-4">
