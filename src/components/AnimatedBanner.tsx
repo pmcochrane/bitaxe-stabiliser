@@ -22,8 +22,8 @@ export function AnimatedBanner({ children, show, className = '' }: AnimatedBanne
 
 	return (
 		<div
-			className={`transition-all duration-300 ease-in-out ${
-				show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+			className={`transition-all duration-300 ease-in-out overflow-hidden ${
+				show ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 -translate-y-2 max-h-0'
 			} ${className}`}
 		>
 			{children}
