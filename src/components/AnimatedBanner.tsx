@@ -8,11 +8,14 @@ interface AnimatedBannerProps {
 
 export function AnimatedBanner({ children, show, className = '' }: AnimatedBannerProps) {
 	const [isVisible, setIsVisible] = useState(!!show);
+	const [isAnimating, setIsAnimating] = useState(false);
 
 	useEffect(() => {
 		if (show) {
 			setIsVisible(true);
+			requestAnimationFrame(() => setIsAnimating(true));
 		} else {
+			setIsAnimating(false);
 			const timer = setTimeout(() => setIsVisible(false), 300);
 			return () => clearTimeout(timer);
 		}
@@ -23,7 +26,7 @@ export function AnimatedBanner({ children, show, className = '' }: AnimatedBanne
 	return (
 		<div
 			className={`transition-all duration-300 ease-in-out overflow-hidden ${
-				show ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 -translate-y-2 max-h-0'
+				isAnimating ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 -translate-y-2 max-h-0'
 			} ${className}`}
 		>
 			{children}
