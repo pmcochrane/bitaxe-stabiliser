@@ -442,6 +442,7 @@ export default function Dashboard() {
 	}
 
 	const current = status?.current;
+	const bitaxeOffline = status?.bitaxeReachable === false;
 
 	return (
 		<>
@@ -634,31 +635,37 @@ export default function Dashboard() {
 							);
 						})()}
 						<div className="flex flex-col gap-2">
-							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
+							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === true 
 									? 'border-green-500 bg-green-500 text-white' 
-									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+									: bitaxeOffline
+										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}>
 								<input
 									type="radio"
 									name="stabilise"
 									checked={status?.stabilise === true}
-									onChange={() => status?.stabilise !== true && handleToggleStabilise()}
+									onChange={() => !bitaxeOffline && status?.stabilise !== true && handleToggleStabilise()}
 									className="hidden"
+									disabled={bitaxeOffline}
 								/>
 								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Actively Adjust Temperature</span>
 							</label>
-							<label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-3 rounded-lg border ${
+							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === false 
 									? 'border-gray-400 bg-gray-400 text-white' 
-									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+									: bitaxeOffline
+										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}>
 								<input
 									type="radio"
 									name="stabilise"
 									checked={status?.stabilise === false}
-									onChange={() => status?.stabilise !== false && handleToggleStabilise()}
+									onChange={() => !bitaxeOffline && status?.stabilise !== false && handleToggleStabilise()}
 									className="hidden"
+									disabled={bitaxeOffline}
 								/>
 								<span className={status?.stabilise === false ? 'text-white' : 'dark:text-white'}>No Stabilisation</span>
 							</label>
@@ -672,13 +679,15 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustFreq(1)}
-									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Step +
 								</button>
 								<button
 									onClick={() => handleAdjustFreq(-1)}
-									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Step -
 								</button>
@@ -686,13 +695,15 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustVoltage(5)}
-									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Voltage +
 								</button>
 								<button
 									onClick={() => handleAdjustVoltage(-5)}
-									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Voltage -
 								</button>
@@ -700,13 +711,15 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustMaxFreq(6.25)}
-									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Max Freq +
 								</button>
 								<button
 									onClick={() => handleAdjustMaxFreq(-6.25)}
-									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Max Freq -
 								</button>
@@ -714,13 +727,15 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={handleToggleSweep}
-									className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
 								</button>
 								<button
 									onClick={handleResetData}
-									className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90"
+									disabled={bitaxeOffline}
+									className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Clear Historical Data
 								</button>
