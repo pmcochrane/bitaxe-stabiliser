@@ -14,12 +14,18 @@ function App() {
 	});
 
 	useEffect(() => {
-		getSettings()
-			.then((settings) => {
-				setIp(settings.ip);
-				setHostname(settings.hostname);
-			})
-			.catch(console.error);
+		const fetchSettings = () => {
+			getSettings()
+				.then((settings) => {
+					setIp(settings.ip);
+					setHostname(settings.hostname);
+				})
+				.catch(console.error);
+		};
+
+		fetchSettings();
+		const interval = setInterval(fetchSettings, 30000);
+		return () => clearInterval(interval);
 	}, []);
 
 	useEffect(() => {
