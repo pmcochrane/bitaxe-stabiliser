@@ -1,7 +1,7 @@
-node_modules
-dist/*
+node_modules/
+dist/
 .env
 originalbashversion
 data/
 data
-public/assets
+public/

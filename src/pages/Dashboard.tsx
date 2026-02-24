@@ -461,7 +461,7 @@ export default function Dashboard() {
 								Inappropriate settings may result in permanently damaging your Bitaxe or leaving your device unresponsive. 
 								Power requirements could also outstrip the rating of your power supply and should at maximum only be 80% of the rated value on the power supply.
 							</p>
-							<p className="mt-2 text-sm font-semibold">Use at your own risk.</p>
+							<p className="mt-2 text-sm font-semibold">Use this software at your own risk.</p>
 						</div>
 						<button
 							onClick={() => {
