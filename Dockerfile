@@ -8,14 +8,18 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# ───────────────────────────────────────────────
+# Final image
+# ───────────────────────────────────────────────
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache tini
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/dist       ./dist
+COPY --from=builder /app/public     ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
@@ -24,7 +28,5 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-USER node
-
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/index.js"]
