@@ -744,7 +744,7 @@ export default function Dashboard() {
 
 						<form onSubmit={handleSettingsSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-2">
 							<div className="w-full">
-								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Target ASIC (°C)</label>
+								<label className="block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Target ASIC (°C)</label>
 								<input
 									type="number"
 									value={settingsForm.targetAsic}
@@ -755,7 +755,7 @@ export default function Dashboard() {
 								/>
 							</div>
 							<div className="w-full">
-								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Max VR (°C)</label>
+								<label className="block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Max VR (°C)</label>
 								<input
 									type="number"
 									value={settingsForm.maxVr}
@@ -766,7 +766,7 @@ export default function Dashboard() {
 								/>
 							</div>
 							<div className="w-full">
-								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Voltage (mV)</label>
+								<label className="block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Voltage (mV)</label>
 								<input
 									type="number"
 									value={settingsForm.coreVoltage}
@@ -777,7 +777,7 @@ export default function Dashboard() {
 								/>
 							</div>
 							<div className="w-full">
-								<label className="block text-xs font-medium dark:text-white whitespace-nowrap">Max Freq (MHz)</label>
+								<label className="block text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Max Freq (MHz)</label>
 								<input
 									type="number"
 									value={settingsForm.maxFreq}
