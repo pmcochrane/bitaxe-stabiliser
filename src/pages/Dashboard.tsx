@@ -717,7 +717,7 @@ export default function Dashboard() {
 									value={settingsForm.maxFreq}
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxFreq: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
-									step={0.5}
+									step={6.25}
 								/>
 							</div>
 							<div className="md:col-span-1 flex items-end justify-end">
