@@ -18,6 +18,7 @@ interface GraphDataEntry {
 export default function Dashboard() {
 	const [status, setStatus] = useState<StatusResponse | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [showDisclaimer, setShowDisclaimer] = useState(false);
 	const [graphData, setGraphData] = useState<GraphDataEntry[]>([]);
 	const [settingsForm, setSettingsForm] = useState<Settings>({
 		ip: '',
@@ -283,6 +284,14 @@ export default function Dashboard() {
 	}, [fetchGraphData]);
 
 	useEffect(() => {
+		const lastDisclaimerDate = localStorage.getItem('disclaimerLastDismissed');
+		const today = new Date().toDateString();
+		if (lastDisclaimerDate !== today) {
+			setShowDisclaimer(true);
+		}
+	}, []);
+
+	useEffect(() => {
 		fetchStatus();
 		const interval = setInterval(fetchStatus, 3000);
 		return () => clearInterval(interval);
@@ -443,6 +452,29 @@ export default function Dashboard() {
 				onConfirm={modalState.onConfirm}
 				onCancel={closeModal}
 			/>
+			{showDisclaimer && (
+				<div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-500 text-yellow-800 dark:text-yellow-200 rounded">
+					<div className="flex items-start justify-between">
+						<div>
+							<strong className="text-lg">Disclaimer - Use at Own Risk</strong>
+							<p className="mt-2 text-sm">
+								Inappropriate settings may result in permanently damaging your Bitaxe or leaving your device unresponsive. 
+								Power requirements could also outstrip the rating of your power supply and should at maximum only be 80% of the rated value on the power supply.
+							</p>
+							<p className="mt-2 text-sm font-semibold">Use at your own risk.</p>
+						</div>
+						<button
+							onClick={() => {
+								localStorage.setItem('disclaimerLastDismissed', new Date().toDateString());
+								setShowDisclaimer(false);
+							}}
+							className="ml-4 px-3 py-1 text-sm bg-yellow-200 dark:bg-yellow-800 hover:bg-yellow-300 dark:hover:bg-yellow-700 rounded"
+						>
+							Dismiss
+						</button>
+					</div>
+				</div>
+			)}
 			<div className="container mx-auto p-4">
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 					{/* Current Bitaxe Status */}
