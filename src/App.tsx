@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
+import About from './pages/About';
 import { getSettings, getInfo } from './services/api';
 
 function App() {
@@ -98,6 +99,12 @@ function App() {
 							>
 								History
 							</Link>
+							<Link
+								to="/about"
+								className={`hover:text-blue-300 ${location.pathname === '/about' ? 'text-blue-300' : ''}`}
+							>
+								About
+							</Link>
 						</div>
 						<a
 							href="https://github.com/YOUR_REPO"
@@ -123,6 +130,7 @@ function App() {
 			<Routes>
 				<Route path="/" element={<Dashboard />} />
 				<Route path="/history" element={<History />} />
+				<Route path="/about" element={<About />} />
 			</Routes>
 		</div>
 	);

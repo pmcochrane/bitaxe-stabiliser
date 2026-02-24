@@ -13,6 +13,14 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      '/readme.md': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/package.json': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
 });

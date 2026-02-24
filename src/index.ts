@@ -191,11 +191,20 @@ async function main() {
 
 	const isDev = process.env.NODE_ENV !== 'production';
 
+	app.use('/package.json', express.static(path.join(__dirname, '../package.json')));
+	app.use('/readme.md', express.static(path.join(__dirname, '../README.md')));
+
 	if (!isDev) {
 		app.use(express.static('public'));
 
 		app.get('*', (req, res) => {
 			if (!req.path.startsWith('/api')) {
+				res.sendFile(path.join(__dirname, '../public/index.html'));
+			}
+		});
+	} else {
+		app.get('*', (req, res) => {
+			if (!req.path.startsWith('/api') && !req.path.startsWith('/readme') && !req.path.startsWith('/package')) {
 				res.sendFile(path.join(__dirname, '../public/index.html'));
 			}
 		});
