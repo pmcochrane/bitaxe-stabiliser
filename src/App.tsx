@@ -49,6 +49,7 @@ function App() {
 				<div className="container mx-auto flex justify-between items-center">
 					<div className="flex items-center gap-4">
 						<h1 className="text-xl font-bold">Bitaxe Stabiliser &nbsp;
+							{isDev && <span className="px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV Server</span>} &nbsp;
 							{hostname && <span className="text-sm text-gray-400">{hostname}</span>} &nbsp;
 							{ip && (
 								<a
@@ -63,7 +64,6 @@ function App() {
 									{ip}
 								</a>
 							)}
-							{isDev && <span className="ml-2 px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV</span>}
 						</h1>
 					</div>
 					<div className="flex items-center gap-4">
