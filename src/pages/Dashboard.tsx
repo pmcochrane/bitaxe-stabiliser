@@ -751,6 +751,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
 									step={0.25}
+									disabled={bitaxeOffline}
 								/>
 							</div>
 							<div className="w-full">
@@ -761,6 +762,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxVr: parseInt(e.target.value) })}
 									className={getInputClass(settingsForm.maxVr, status?.settings.maxVr)}
 									step={1}
+									disabled={bitaxeOffline}
 								/>
 							</div>
 							<div className="w-full">
@@ -771,6 +773,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, coreVoltage: parseInt(e.target.value) })}
 									className={getInputClass(settingsForm.coreVoltage, status?.settings.coreVoltage)}
 									step={5}
+									disabled={bitaxeOffline}
 								/>
 							</div>
 							<div className="w-full">
@@ -781,10 +784,11 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxFreq: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
 									step={6.25}
+									disabled={bitaxeOffline}
 								/>
 							</div>
 							<div className="md:col-span-1 flex items-end justify-end">
-								<button type="submit" className="px-4 py-2 bg-indigo-500 text-white rounded hover:opacity-90">
+								<button type="submit" disabled={bitaxeOffline} className="px-4 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
 									Set As Defaults
 								</button>
 							</div>
@@ -887,7 +891,8 @@ export default function Dashboard() {
 									);
 									await showAnalysis('Hashrange Analysis Results', content);
 								}}
-								className="px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 w-full"
+								className="px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+								disabled={bitaxeOffline}
 							>
 								Analyse Hashrange
 							</button>
