@@ -449,15 +449,24 @@ export default function Dashboard() {
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
 						{/* Communication error alert */}
-						{status?.bitaxeReachable === false && (
+						{status?.bitaxeReachable===false && (
 							<div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
-								<strong className="text-lg">⚠️ Communication Error - Unable to connect to Bitaxe</strong>
-								<br /><span className="text-sm font-normal">{status.bitaxeError}</span>
+								<strong>⚠️ Bitaxe is not Responding</strong>
+								<br />
+								The application is currently unable to communicate with your Bitaxe device on {status?.settings?.ip}. 
+								You may need to visit the <a href={`http://${status?.settings?.ip}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">web interface</a> to investigate the issue. 
+								Common causes include:
+								<ul className="list-disc ml-5 mt-2 text-sm">
+									<li>Bitaxe is powered off or has crashed / overheated.</li>
+									<li>Network connectivity issues (check cables, Wi-Fi, etc.)</li>
+								</ul>
+								<br />The error reported is: <br />
+								<span className="text-sm font-normal">{status.bitaxeError}</span>
 							</div>
 						)}
 
 						{/* Hashrate warning alert */}
-						{current && status?.bitaxeReachable !== false && current.avgHashRate < (current.expectedHashrate*95/100.0) && (
+						{current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0) && (
 							<div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
@@ -484,9 +493,10 @@ export default function Dashboard() {
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
 									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} TH/s</div>
-									<div className={`text-xs text-right ${getToExpectedColor(current.toExpected)}`}>
-										To Expected: {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
-									</div>
+								<div className={`text-xs text-right ${getToExpectedColor(current.toExpected)}`} 
+										title={current.toExpected < 0 ? 'Negative value may indicate core voltage is too low to attain the expected frequency. Consider increasing core voltage.' : ''}>
+									To Expected: {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
+								</div>
 									<div className="text-xs text-gray-400 text-right">Expected: {(current.expectedHashrate / 1000).toFixed(3)} TH/s</div>
 									<div className="text-xs text-gray-400 text-right ${current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}">Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s</div>
 								</div>
@@ -529,8 +539,9 @@ export default function Dashboard() {
 									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Offset: ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>Core Voltage</div>
 									<div className="text-xl font-bold dark:text-white">{current.coreVoltage.toFixed(1)} mV</div>
 									<div className={`text-sm ${current.coreVoltage < settingsForm.coreVoltage ? 'text-amber-600 dark:text-amber-400' : current.coreVoltage > settingsForm.coreVoltage ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
-											title={`Step at ${current.stepDown} forces an offset of ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>
-										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}{Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)} mV
+											title={`Step at ${current.stepDown} forces an offset of ${Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)}mV from base ${settingsForm.coreVoltage}mV`}>
+										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}
+											{Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)} mV
 									</div>
 								</div>
 								<div>
@@ -547,12 +558,13 @@ export default function Dashboard() {
 						{/* Low step warning alert */}
 						{status?.showLowStepWarning && !status?.sweepMode && (
 							<div className="mt-3 p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
-								<strong className="text-lg">⚠️ Cannot attain the desired maximum frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
-								<br />
-								<br />
-								Consider lowering this value so that it is holding closer to 0 at the ambient room temp. 
-								This may also allow you to reduce the core voltage increasing the efficiency of the device.
-								<br /><br />If it lowers over time, this may indicate a cooling issue with the device or a significant change to ambient temperature.
+								<strong className="text-lg">⚠️ Failing to attain the desired frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
+								<ul className="list-disc ml-5 mt-2 text-sm">
+									<li>Consider lowering the max frequency so that step can hold closer to 0 at the ambient room temperature.</li>
+									<li>Room heating will affect the automated step value as the device will need to step up or down more to maintain the target ASIC temperature.</li>
+									<li>Reductions to frequency may also allow you to reduce the core voltage increasing the efficiency of the device.</li>
+									<li>Step permanently lowering over time may indicate a cooling issue with the device or a significant change to ambient room temperature.</li>
+								</ul>
 							</div>
 						)}
 					</div>
@@ -725,7 +737,7 @@ export default function Dashboard() {
 							</div>
 							<div className="md:col-span-1 flex items-end justify-end">
 								<button type="submit" className="px-4 py-2 bg-indigo-500 text-white rounded hover:opacity-90">
-									Save
+									Set As Defaults
 								</button>
 							</div>
 						</form>

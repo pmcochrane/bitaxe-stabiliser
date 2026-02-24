@@ -32,6 +32,8 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 		const bitaxeReachable = await monitor.getClient().isReachable();
 		const bitaxeError = bitaxeReachable ? '' : monitor.getClient().getLastError();
+		// const bitaxeReachable = false;
+		// const bitaxeError = bitaxeReachable ? '' : "Testing bitaxe not reachable";
 		const sweepInfo = monitor.getSweepInfo();
 
 		res.json({

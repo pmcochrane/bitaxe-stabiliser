@@ -16,7 +16,7 @@ export class MonitorService {
 	private asicTemps: number[] = [];
 	private vrTemps: number[] = [];
 
-	private maxStepUp = 0;
+	private maxStepUp = 5;
 	private secondsBetweenPasses = 1;
 	private stepUpEveryXPasses = 3; // actually 4
 	private stepDownEveryXPasses = 2; // actually 3
@@ -327,7 +327,7 @@ export class MonitorService {
 		const stepFreq = this.state.stepDown * 6.25;
 		this.desiredFreq = this.settings.maxFreq + stepFreq;
 
-		const voltageOffset = Math.floor(Math.abs(this.state.stepDown) / 5) * -5;
+		const voltageOffset = this.state.stepDown<-5 ? Math.floor(Math.abs(this.state.stepDown+5) / 5) * -5 : 0;
 		const adjustedVoltage = this.settings.coreVoltage + voltageOffset;
 
 		if (this.desiredFreq === this.state.lastFrequencyApplied &&
