@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getStatus, updateSettings, sendControl, getHistoryGraph } from '../services/api';
+import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAnalysis, HashrangeAnalysis } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
@@ -33,7 +33,8 @@ export default function Dashboard() {
 	const [graphHours, setGraphHours] = useState(2);
 	const [isPageVisible, setIsPageVisible] = useState(true);
 	const [isDarkMode, setIsDarkMode] = useState(false);
-	const { modalState, showConfirm, showAlert, closeModal } = useModal();
+	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
+	const { modalState, showConfirm, showAlert, showAnalysis, closeModal } = useModal();
 	const prevGraphHours = useRef(graphHours);
 
 	useEffect(() => {
@@ -272,7 +273,7 @@ export default function Dashboard() {
 		if (cachedData.length > 0) {
 			setGraphData(cachedData);
 		}
-		console.log(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
+		logUi(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
 	}, [graphHours, loadCachedGraphData]);
 
 	useEffect(() => {
@@ -724,6 +725,109 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</form>
+						<div className="mt-4">
+							<button
+								onClick={async () => {
+									const analysis = await getHashrangeAnalysis();
+									if (analysis.error) {
+										await showAlert('Hashrange Analysis', analysis.error);
+										return;
+									}
+									setHashrangeAnalysis(analysis);
+									const getRankBadge = (rank: number, type: 'hashrate' | 'power' | 'asic' | 'vr' | 'efficiency') => {
+										if (rank === 0) return null;
+										const colors: Record<string, string> = {
+											hashrate: 'bg-yellow-500',
+											power: 'bg-green-500',
+											asic: 'bg-blue-500',
+											vr: 'bg-purple-500',
+											efficiency: 'bg-red-500',
+										};
+										const opacity = Math.max(0.2, (6 - rank) * 0.2);
+										return (
+											<span className={`inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full ${colors[type]} ml-1`} style={{ opacity }}>
+												{rank}
+											</span>
+										);
+									};
+									const getHeaderBadge = (type: 'hashrate' | 'power' | 'asic' | 'vr' | 'efficiency') => {
+										const colors: Record<string, string> = {
+											hashrate: 'bg-yellow-500',
+											power: 'bg-green-500',
+											asic: 'bg-blue-500',
+											vr: 'bg-purple-500',
+											efficiency: 'bg-red-500',
+										};
+										return <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${colors[type]} ml-1`}></span>;
+									};
+									const renderHeader = () => (
+										<tr className="border-b dark:border-gray-600">
+											<th className="text-left p-1 dark:text-white">Freq</th>
+											<th className="text-right p-1 dark:text-white">Voltage</th>
+											<th className="text-right p-1 dark:text-white">Hashrate {getHeaderBadge('hashrate')}</th>
+											<th className="text-right p-1 dark:text-white">ASIC {getHeaderBadge('asic')}</th>
+											<th className="text-right p-1 dark:text-white">VR {getHeaderBadge('vr')}</th>
+											<th className="text-right p-1 dark:text-white">Power {getHeaderBadge('power')}</th>
+											<th className="text-right p-1 dark:text-white">Eff {getHeaderBadge('efficiency')}</th>
+										</tr>
+									);
+									const content = (
+										<div>
+											{analysis.sweepStartTime && (
+												<div className="mb-4 text-sm dark:text-gray-300">
+													Sweep started: {new Date(analysis.sweepStartTime).toLocaleString()}
+												</div>
+											)}
+											<div className="overflow-x-auto">
+												<table className="w-full text-xs">
+													<thead>
+														{renderHeader()}
+													</thead>
+													<tbody>
+														{analysis.allData.map((e, i) => (
+															<tr key={i} className={`border-b dark:border-gray-600 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
+																<td className="p-1 dark:text-white">
+																	{e.frequency.toFixed(3)}
+																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
+																</td>
+																<td className="p-1 text-right dark:text-white">{e.coreVoltage.toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white relative">
+																	{(e.avgHashRate/1000).toFixed(3)}
+																	{e.rankHashrate > 0 && getRankBadge(e.rankHashrate, 'hashrate')}
+																</td>
+																<td className="p-1 text-right dark:text-white relative">
+																	{e.avgAsicTemp.toFixed(1)}
+																	{e.rankAsicTemp > 0 && getRankBadge(e.rankAsicTemp, 'asic')}
+																</td>
+																<td className="p-1 text-right dark:text-white relative">
+																	{e.avgVrTemp.toFixed(1)}
+																	{e.rankVrTemp > 0 && getRankBadge(e.rankVrTemp, 'vr')}
+																</td>
+																<td className="p-1 text-right dark:text-white relative">
+																	{e.avgPower.toFixed(1)}
+																	{e.rankPower > 0 && getRankBadge(e.rankPower, 'power')}
+																</td>
+																<td className="p-1 text-right dark:text-white relative">
+																	{e.efficiency.toFixed(2)}
+																	{e.rankEfficiency > 0 && getRankBadge(e.rankEfficiency, 'efficiency')}
+																</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											</div>
+											<div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+												Ranking badges: 🟡 Hashrate &nbsp; 🔵 ASIC Temp &nbsp; 🟣 VR Temp &nbsp; 🟢 Power &nbsp; 🔴 Efficiency (lower is better)
+											</div>
+										</div>
+									);
+									await showAnalysis('Hashrange Analysis Results', content);
+								}}
+								className="px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 w-full"
+							>
+								Analyse Hashrange
+							</button>
+						</div>
 					</div>
 				</div>
 

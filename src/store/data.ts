@@ -60,8 +60,8 @@ export class DataStore {
 			hostname: '',
 			targetAsic: 65,
 			maxVr: 80,
-			coreVoltage: 1245,
-			maxFreq: 924.5,
+			coreVoltage: 1150,
+			maxFreq: 525,
 			maxHistoryEntries: 172800,
 			lowStepAnalyseRange: 50,
 			lowStepWarningThreshold: -10,
@@ -230,14 +230,7 @@ export class DataStore {
 	}
 
 	setHashrangeEntry(entry: HashrangeEntry): void {
-		const existing = this.data.hashrange.findIndex(
-			e => Math.abs(e.frequency - entry.frequency) < 1 && e.coreVoltage === entry.coreVoltage
-		);
-		if (existing >= 0) {
-			this.data.hashrange[existing] = entry;
-		} else {
-			this.data.hashrange.push(entry);
-		}
+		this.data.hashrange.push(entry);
 		this.data.hashrange.sort((a, b) => {
 			if (a.frequency !== b.frequency) return a.frequency - b.frequency;
 			return a.coreVoltage - b.coreVoltage;

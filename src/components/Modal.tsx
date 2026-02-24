@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 
 interface ModalProps {
 	isOpen: boolean;
 	title: string;
-	message: string;
-	type: 'confirm' | 'alert';
+	message: string | ReactNode;
+	type: 'confirm' | 'alert' | 'analysis';
 	onConfirm?: () => void;
 	onCancel?: () => void;
 }
@@ -28,9 +28,13 @@ export function Modal({ isOpen, title, message, type, onConfirm, onCancel }: Mod
 				className="absolute inset-0 bg-black/50 backdrop-blur-sm"
 				onClick={onCancel}
 			/>
-			<div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border dark:border-gray-700 animate-in fade-in zoom-in-95 duration-200">
+			<div className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl ${type === 'analysis' ? 'max-w-4xl w-full' : 'max-w-md w-full'} mx-4 p-6 border dark:border-gray-700 animate-in fade-in zoom-in-95 duration-200`}>
 				<h2 className="text-xl font-semibold mb-2 dark:text-white">{title}</h2>
-				<p className="text-gray-600 dark:text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: message }} />
+				{typeof message === 'string' ? (
+					<p className="text-gray-600 dark:text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: message }} />
+				) : (
+					<div className="mb-6">{message}</div>
+				)}
 				
 				<div className="flex justify-end gap-3">
 					{type === 'confirm' ? (
@@ -48,6 +52,13 @@ export function Modal({ isOpen, title, message, type, onConfirm, onCancel }: Mod
 								Confirm
 							</button>
 						</>
+					) : type === 'analysis' ? (
+						<button
+							onClick={onConfirm}
+							className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+						>
+							Close
+						</button>
 					) : (
 						<button
 							onClick={onConfirm}
@@ -66,8 +77,8 @@ export function useModal() {
 	const [modalState, setModalState] = useState<{
 		isOpen: boolean;
 		title: string;
-		message: string;
-		type: 'confirm' | 'alert';
+		message: string | React.ReactNode;
+		type: 'confirm' | 'alert' | 'analysis';
 		onConfirm?: () => void;
 	}>({
 		isOpen: false,
@@ -106,9 +117,24 @@ export function useModal() {
 		});
 	};
 
+	const showAnalysis = (title: string, content: React.ReactNode): Promise<void> => {
+		return new Promise((resolve) => {
+			setModalState({
+				isOpen: true,
+				title,
+				message: content,
+				type: 'analysis',
+				onConfirm: () => {
+					setModalState(prev => ({ ...prev, isOpen: false }));
+					resolve();
+				},
+			});
+		});
+	};
+
 	const closeModal = () => {
 		setModalState(prev => ({ ...prev, isOpen: false }));
 	};
 
-	return { modalState, showConfirm, showAlert, closeModal };
+	return { modalState, showConfirm, showAlert, showAnalysis, closeModal };
 }

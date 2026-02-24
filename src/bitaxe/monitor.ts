@@ -25,9 +25,10 @@ export class MonitorService {
 	private drasticMeasureDelay = 3;
 
 	private maxSweepSteps = 24;
-	private sweepIterations = 150;
+	private sweepIterations = 50; //150;
 	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
+	private sweepStartTime = '';
 
 	private minHashRate = 1000000000;
 	private maxHashRate = 0;
@@ -156,6 +157,7 @@ export class MonitorService {
 		this.autoAdjustFreq = false;
 		this.applyChange = true;
 		this.sweepIterationsCounter = 0;
+		this.sweepStartTime = new Date().toISOString();
 		this.store.clearHashrange();
 		this.changeMessage=`Sweep started: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
@@ -436,9 +438,10 @@ export class MonitorService {
 					this.applyChange = true;
 				}
 			}
+			if (this.sweepIterationsCounter >= 20) {
+				this.saveHashrange();
+			}
 		}
-
-		this.saveHashrange();
 	}
 
 	private saveHashrange(): void {
@@ -460,6 +463,7 @@ export class MonitorService {
 			avgPower: this.overallAveragePower,
 			iterations: this.iteration,
 			lastUpdate: new Date().toISOString(),
+			sweepStartTime: this.sweepStartTime,
 		};
 
 		this.store.setHashrangeEntry(entry);

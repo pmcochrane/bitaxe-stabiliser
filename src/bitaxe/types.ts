@@ -87,6 +87,7 @@ export interface HashrangeEntry {
 	avgPower: number;
 	iterations: number;
 	lastUpdate: string;
+	sweepStartTime?: string;
 }
 
 export interface ControlCommand {

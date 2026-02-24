@@ -156,6 +156,93 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		res.json(store.getHashrange());
 	});
 
+	router.get('/hashrange/analyse', (req: Request, res: Response) => {
+		const hashrange = store.getHashrange();
+		
+		if (hashrange.length === 0) {
+			res.json({ error: 'No hashrange data available. Run sweep mode first.' });
+			return;
+		}
+
+		const sweepStartTime = hashrange[0]?.sweepStartTime || '';
+		
+		const freqMap = new Map<number, { avgHashRate: number; avgAsicTemp: number; avgVrTemp: number; avgPower: number; efficiency: number; coreVoltage: number; count: number }>();
+		
+		for (const e of hashrange) {
+			const freq = Math.round(e.frequency * 1000) / 1000;
+			const existing = freqMap.get(freq);
+			if (existing) {
+				existing.avgHashRate += e.avgHashRate;
+				existing.avgAsicTemp += e.avgAsicTemp;
+				existing.avgVrTemp += e.avgVrTemp;
+				existing.avgPower += e.avgPower;
+				existing.efficiency += e.efficiency;
+				existing.coreVoltage += e.coreVoltage;
+				existing.count++;
+			} else {
+				freqMap.set(freq, {
+					avgHashRate: e.avgHashRate,
+					avgAsicTemp: e.avgAsicTemp,
+					avgVrTemp: e.avgVrTemp,
+					avgPower: e.avgPower,
+					efficiency: e.efficiency,
+					coreVoltage: e.coreVoltage,
+					count: 1,
+				});
+			}
+		}
+		
+		const averagedData = Array.from(freqMap.entries()).map(([frequency, data]) => ({
+			frequency,
+			coreVoltage: data.coreVoltage / data.count,
+			avgHashRate: data.avgHashRate / data.count,
+			avgAsicTemp: data.avgAsicTemp / data.count,
+			avgVrTemp: data.avgVrTemp / data.count,
+			avgPower: data.avgPower / data.count,
+			efficiency: data.efficiency / data.count,
+		}));
+
+		const sortedByHashrate = [...averagedData].sort((a, b) => b.avgHashRate - a.avgHashRate);
+		const sortedByPower = [...averagedData].sort((a, b) => a.avgPower - b.avgPower);
+		const sortedByAsicTemp = [...averagedData].sort((a, b) => a.avgAsicTemp - b.avgAsicTemp);
+		const sortedByVrTemp = [...averagedData].sort((a, b) => a.avgVrTemp - b.avgVrTemp);
+		const sortedByEfficiency = [...averagedData].sort((a, b) => a.efficiency - b.efficiency);
+
+		const topHashrate = new Set(sortedByHashrate.slice(0, 5).map(e => e.frequency));
+		const topPower = new Set(sortedByPower.slice(0, 5).map(e => e.frequency));
+		const topAsicTemp = new Set(sortedByAsicTemp.slice(0, 5).map(e => e.frequency));
+		const topVrTemp = new Set(sortedByVrTemp.slice(0, 5).map(e => e.frequency));
+		const topEfficiency = new Set(sortedByEfficiency.slice(0, 5).map(e => e.frequency));
+
+		const getRank = (freq: number, set: Set<number>) => {
+			const arr = Array.from(set);
+			const idx = arr.indexOf(freq);
+			return idx >= 0 ? idx + 1 : 0;
+		};
+
+		const allData = averagedData.map(e => ({
+			frequency: e.frequency,
+			coreVoltage: e.coreVoltage,
+			avgHashRate: e.avgHashRate,
+			avgAsicTemp: e.avgAsicTemp,
+			avgVrTemp: e.avgVrTemp,
+			avgPower: e.avgPower,
+			efficiency: e.efficiency,
+			rankHashrate: getRank(e.frequency, topHashrate),
+			rankPower: getRank(e.frequency, topPower),
+			rankAsicTemp: getRank(e.frequency, topAsicTemp),
+			rankVrTemp: getRank(e.frequency, topVrTemp),
+			rankEfficiency: getRank(e.frequency, topEfficiency),
+		}));
+
+		const result = {
+			sweepStartTime,
+			allData,
+		};
+
+		res.json(result);
+	});
+
 	router.get('/ping', (req: Request, res: Response) => {
 		monitor.getClient().isReachable().then((reachable) => {
 			res.json({ reachable });

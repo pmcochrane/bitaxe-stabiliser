@@ -50,4 +50,28 @@ export async function getHistoryGraph(hours = 24, since?: string): Promise<Histo
 	return data;
 }
 
+export interface HashrangeAnalysis {
+	error?: string;
+	sweepStartTime?: string;
+	allData: {
+		frequency: number;
+		coreVoltage: number;
+		avgHashRate: number;
+		avgAsicTemp: number;
+		avgVrTemp: number;
+		avgPower: number;
+		efficiency: number;
+		rankHashrate: number;
+		rankPower: number;
+		rankAsicTemp: number;
+		rankVrTemp: number;
+		rankEfficiency: number;
+	}[];
+}
+
+export async function getHashrangeAnalysis(): Promise<HashrangeAnalysis> {
+	const { data } = await api.get<HashrangeAnalysis>('/hashrange/analyse');
+	return data;
+}
+
 export default api;

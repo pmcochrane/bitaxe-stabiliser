@@ -10,6 +10,7 @@ import { createApiRouter } from './routes';
 import { logIndex } from './utils/logger';
 import { log } from 'console';
 import e from 'express';
+import { DefaultLegendContent } from 'recharts';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -20,9 +21,7 @@ if (!process.env.BITAXE_IP) {
 }
 
 const BITAXE_IP = process.env.BITAXE_IP;
-const BITAXE_HOSTNAME = process.env.BITAXE_HOSTNAME || BITAXE_IP;
-const DATA_DIR = process.env.DATA_DIR || `./data/${BITAXE_IP}`;
-const SETTINGS_FILE = process.env.SETTINGS_FILE || `${DATA_DIR}/settings.json`;
+const BITAXE_HOSTNAME = process.env.BITAXE_HOSTNAME || '';
 const HISTORY_LIMIT = process.env.HISTORY_LIMIT ? parseInt(process.env.HISTORY_LIMIT) : 172800;
 
 const TARGET_ASIC = process.env.TARGET_ASIC ? parseFloat(process.env.TARGET_ASIC) : undefined;
@@ -32,17 +31,38 @@ const MAX_FREQ = process.env.MAX_FREQ ? parseFloat(process.env.MAX_FREQ) : undef
 const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(process.env.LOW_STEP_ANALYSE_RANGE) : undefined;
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 
-if (!fs.existsSync(DATA_DIR)) {
-	fs.mkdirSync(DATA_DIR, { recursive: true });
+async function getDataDir(): Promise<string> {
+	const hostname = BITAXE_HOSTNAME || BITAXE_IP;
+	let retval=`./data/${hostname}`;
+	
+	if (BITAXE_HOSTNAME==="") {
+		logIndex("Attempt to retrieve the bitaxe hostname from the API");
+		try {
+			const response = await axios.get(`http://${BITAXE_IP}/api/system/info`, { timeout: 5000 });
+			retval=`./data/${response.data.hostname || hostname}`;
+			logIndex("Successfully retrieved the bitaxe hostname from the API: " + response.data.hostname);
+		} catch (error) {
+			logIndex('Failed to lookup the hostname from the API');
+		}
+	}
+	logIndex(`Using data directory: ${retval}`);
+	return retval;
 }
 
-const store = new DataStore(
-	SETTINGS_FILE,
-	`${DATA_DIR}/history.json`,
-	`${DATA_DIR}/hashrange.json`,
-	`${DATA_DIR}/events.json`,
-	HISTORY_LIMIT
-);
+getDataDir().then((dataDir) => {
+	const SETTINGS_FILE = `${dataDir}/settings.json`;
+
+	if (!fs.existsSync(dataDir)) {
+		fs.mkdirSync(dataDir, { recursive: true });
+	}
+
+	const store = new DataStore(
+		SETTINGS_FILE,
+		`${dataDir}/history.json`,
+		`${dataDir}/hashrange.json`,
+		`${dataDir}/events.json`,
+		HISTORY_LIMIT
+	);
 
 async function getBitaxeSettings(): Promise<{ coreVoltage: number; frequency: number } | null> {
 	try {
@@ -58,10 +78,12 @@ async function getBitaxeSettings(): Promise<{ coreVoltage: number; frequency: nu
 	}
 }
 
+
 async function initializeSettings() {
+	const bitaxeSettings = await getBitaxeSettings();
 	let settings = store.getSettings();
 	if (settings) {
-		logIndex('Loaded settings from file');
+		logIndex('Loaded settings from settings file');
 	} else {
 		logIndex('No previous settings file found for this Bitaxe IP address');
 	}
@@ -91,8 +113,6 @@ async function initializeSettings() {
 		logIndex(`[default] maxVr: 80`);
 	}
 	
-	const bitaxeSettings = await getBitaxeSettings();
-
 	// get coreVoltage setting from env, then settings file, then current Bitaxe setting, then default to 1150
 	if (CORE_VOLTAGE !== undefined) {
 		settings.coreVoltage = CORE_VOLTAGE;
@@ -195,3 +215,4 @@ async function main() {
 }
 
 main();
+});
