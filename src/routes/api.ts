@@ -57,7 +57,11 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 	});
 
 	router.get('/settings', (req: Request, res: Response) => {
-		res.json(store.getSettings());
+		res.json({ ...store.getSettings(), isDev: process.env.NODE_ENV !== 'production' });
+	});
+
+	router.get('/info', (req: Request, res: Response) => {
+		res.json({ isDev: process.env.NODE_ENV !== 'production' });
 	});
 
 	router.put('/settings', (req: Request, res: Response) => {

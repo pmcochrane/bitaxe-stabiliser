@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
-import { getSettings } from './services/api';
+import { getSettings, getInfo } from './services/api';
 
 function App() {
 	const location = useLocation();
 	const [ip, setIp] = useState('');
 	const [hostname, setHostname] = useState('');
+	const [isDev, setIsDev] = useState(false);
 	const [darkMode, setDarkMode] = useState(() => {
 		const stored = localStorage.getItem('darkMode');
 		return stored === null ? true : stored === 'true';
@@ -19,6 +20,11 @@ function App() {
 				.then((settings) => {
 					setIp(settings.ip);
 					setHostname(settings.hostname);
+				})
+				.catch(console.error);
+			getInfo()
+				.then((info) => {
+					setIsDev(info.isDev);
 				})
 				.catch(console.error);
 		};
@@ -57,6 +63,8 @@ function App() {
 									{ip}
 								</a>
 							)}
+							{isDev && <span className="ml-2 px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV</span>}
+							{!isDev && <span className="ml-2 px-2 py-1 text-xs font-bold bg-green-600 text-white rounded">PROD</span>}
 						</h1>
 					</div>
 					<div className="flex items-center gap-4">

@@ -15,6 +15,11 @@ export async function getSettings(): Promise<Settings> {
 	return data;
 }
 
+export async function getInfo(): Promise<{ isDev: boolean }> {
+	const { data } = await api.get<{ isDev: boolean }>('/info');
+	return data;
+}
+
 export async function updateSettings(settings: Partial<Settings>): Promise<Settings> {
 	const { data } = await api.put<Settings>('/settings', settings);
 	return data;
