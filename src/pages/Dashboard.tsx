@@ -436,7 +436,7 @@ export default function Dashboard() {
 	if (loading) {
 		return (
 			<div className="container mx-auto p-4">
-				<div className="animate-pulse">Loading...</div>
+				<div className="animate-pulse dark:text-white">Loading...</div>
 			</div>
 		);
 	}
