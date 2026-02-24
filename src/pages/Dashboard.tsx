@@ -684,9 +684,9 @@ export default function Dashboard() {
 								<input
 									type="number"
 									value={settingsForm.targetAsic}
-									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseInt(e.target.value) })}
+									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
-									step={1}
+									step={0.25}
 								/>
 							</div>
 							<div className="w-full">
