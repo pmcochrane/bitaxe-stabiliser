@@ -21,7 +21,7 @@ if (!process.env.BITAXE_IP) {
 }
 
 const BITAXE_IP = process.env.BITAXE_IP;
-const BITAXE_HOSTNAME = process.env.BITAXE_HOSTNAME || '';
+let BITAXE_HOSTNAME = process.env.BITAXE_HOSTNAME || '';
 const HISTORY_LIMIT = process.env.HISTORY_LIMIT ? parseInt(process.env.HISTORY_LIMIT) : 172800;
 
 const TARGET_ASIC = process.env.TARGET_ASIC ? parseFloat(process.env.TARGET_ASIC) : undefined;
@@ -32,14 +32,14 @@ const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(pro
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 
 async function getDataDir(): Promise<string> {
-	const hostname = BITAXE_HOSTNAME || BITAXE_IP;
-	let retval=`./data/${hostname}`;
+	let retval=`./data/${BITAXE_IP}`;
 	
 	if (BITAXE_HOSTNAME==="") {
 		logIndex("Attempt to retrieve the bitaxe hostname from the API");
 		try {
 			const response = await axios.get(`http://${BITAXE_IP}/api/system/info`, { timeout: 5000 });
-			retval=`./data/${response.data.hostname || hostname}`;
+			retval=`./data/${response.data.hostname || BITAXE_IP}`;
+			BITAXE_HOSTNAME=response.data.hostname || BITAXE_IP;
 			logIndex("Successfully retrieved the bitaxe hostname from the API: " + response.data.hostname);
 		} catch (error) {
 			logIndex('Failed to lookup the hostname from the API');
