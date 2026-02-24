@@ -327,16 +327,19 @@ export class MonitorService {
 		const stepFreq = this.state.stepDown * 6.25;
 		this.desiredFreq = this.settings.maxFreq + stepFreq;
 
+		const voltageOffset = Math.floor(Math.abs(this.state.stepDown) / 5) * -5;
+		const adjustedVoltage = this.settings.coreVoltage + voltageOffset;
+
 		if (this.desiredFreq === this.state.lastFrequencyApplied &&
-				this.settings.coreVoltage === this.state.lastCoreVoltageApplied) {
+				adjustedVoltage === this.state.lastCoreVoltageApplied) {
 			return;
 		}
 
-		logMonitor(`[${this.iteration}] ${this.changeMessage}		Applying: Voltage=${this.settings.coreVoltage}mV, Freq=${this.desiredFreq}MHz`);
-		this.client.setSystemSettings(this.desiredFreq, this.settings.coreVoltage);
+		logMonitor(`[${this.iteration}] ${this.changeMessage}		Applying: Voltage=${adjustedVoltage}mV (offset: ${voltageOffset}mV), Freq=${this.desiredFreq}MHz`);
+		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
 		this.state.lastFrequencyApplied = this.desiredFreq;
-		this.state.lastCoreVoltageApplied = this.settings.coreVoltage;
+		this.state.lastCoreVoltageApplied = adjustedVoltage;
 		this.state.stepUpCounter = this.stepUpEveryXPasses;
 		this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.applyChange = false;
