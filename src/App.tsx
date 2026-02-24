@@ -43,6 +43,12 @@ function App() {
 		localStorage.setItem('darkMode', String(darkMode));
 	}, [darkMode]);
 
+	useEffect(() => {
+		if (hostname) {
+			document.title = `${hostname}: Bitaxe Stabiliser`;
+		}
+	}, [hostname]);
+
 	return (
 		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
 			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-4">

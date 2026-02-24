@@ -788,8 +788,8 @@ export default function Dashboard() {
 								/>
 							</div>
 							<div className="md:col-span-1 flex items-end justify-end">
-								<button type="submit" disabled={bitaxeOffline} className="px-4 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
-									Set As Defaults
+								<button type="submit" disabled={bitaxeOffline} className="px-4 py-1 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+									Save Defaults
 								</button>
 							</div>
 						</form>
