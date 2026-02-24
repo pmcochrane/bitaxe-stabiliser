@@ -332,7 +332,7 @@ export default function Dashboard() {
 	}, [graphData]);
 
 	const getStepTicks = useMemo((): number[] => {
-		if (graphData.length === 0) return [0, 1, 2, 3, 4];
+		if (graphData.length === 0) return [0, 1, 2, 3, 4, 5];
 		let min = Infinity;
 		let max = -Infinity;
 		for (const d of graphData) {
@@ -340,7 +340,7 @@ export default function Dashboard() {
 			if (d.stepDown > max) max = d.stepDown;
 		}
 		min = Math.min(min, 0);
-		max = Math.max(max, 4);
+		max = Math.max(max, 5);
 		const ticks: number[] = [];
 		for (let i = Math.ceil(min); i <= Math.floor(max); i++) {
 			ticks.push(i);
