@@ -67,6 +67,8 @@ export default function Dashboard() {
 	const [dismissHashrateAlert, setDismissHashrateAlert] = useState(false);
 	const [dismissLowStepAlert, setDismissLowStepAlert] = useState(false);
 	const [apiError, setApiError] = useState<string | null>(null);
+	const [lastStepDownValue, setLastStepDownValue] = useState<number | null>(null);
+	const [stepDownStableCycles, setStepDownStableCycles] = useState(0);
 	const { modalState, showConfirm, showAlert, showAnalysis, closeModal } = useModal();
 	const prevGraphHours = useRef(graphHours);
 	const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -313,6 +315,15 @@ export default function Dashboard() {
 			try {
 				const data = await getStatus();
 				setStatus(data);
+				if (data.current) {
+					if (lastStepDownValue !== null && data.current.stepDown === lastStepDownValue) {
+						setStepDownStableCycles(prev => prev + 1);
+					} else {
+						setStepDownStableCycles(0);
+						setDismissHashrateAlert(false);
+					}
+					setLastStepDownValue(data.current.stepDown);
+				}
 				setApiError(null);
 				if (initialLoad) {
 					setSettingsForm(data.settings);
@@ -607,7 +618,7 @@ export default function Dashboard() {
 						</AnimatedBanner>
 
 						{/* Hashrate warning alert */}
-						<AnimatedBanner show={!!(current && !dataUnavailable && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
+						<AnimatedBanner show={!!(current && !dataUnavailable && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert && stepDownStableCycles >= 10)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
