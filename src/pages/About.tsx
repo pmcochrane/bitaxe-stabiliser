@@ -21,9 +21,12 @@ export default function About() {
 	}, []);
 
 	return (
-		<div className="container mx-auto p-4 max-w-4xl">
+		<div className="container mx-auto p-2 max-w-4xl">
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-				<h1 className="text-2xl font-bold mb-4 dark:text-white">About Bitaxe Stabiliser</h1>
+				<h1 className="text-2xl font-bold mb-4 dark:text-white">
+					About Bitaxe Stabiliser  					
+					<span className="text-gray-500 dark:text-gray-400">	v{version}</span>
+				</h1>
 				
 				<div className="prose dark:prose-invert max-w-none">
 					<ReactMarkdown
