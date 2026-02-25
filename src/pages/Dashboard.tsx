@@ -49,6 +49,7 @@ export default function Dashboard() {
 		lowStepWarningThreshold: -10,
 		stepDownDefault: -10,
 	});
+	const settingsFormRef = useRef(settingsForm);
 	const [initialLoad, setInitialLoad] = useState(true);
 	const GRAPH_HOURS_KEY = 'bitaxe_graph_hours';
 	const getInitialGraphHours = (): number => {
@@ -72,14 +73,16 @@ export default function Dashboard() {
 	const settingsChangedRef = useRef(false);
 
 	const handleSettingChange = (key: keyof Settings, value: number) => {
-		setSettingsForm((prev) => ({ ...prev, [key]: value }));
+		const newSettings = { ...settingsFormRef.current, [key]: value };
+		setSettingsForm(newSettings);
+		settingsFormRef.current = newSettings;
 		settingsChangedRef.current = true;
 		if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
 		saveDebounceRef.current = setTimeout(async () => {
 			if (settingsChangedRef.current) {
 				settingsChangedRef.current = false;
 				try {
-					await updateSettings(settingsForm);
+					await updateSettings(settingsFormRef.current);
 					fetchStatus();
 				} catch (error) {
 					console.error('Failed to save settings:', error);
@@ -313,6 +316,7 @@ export default function Dashboard() {
 				setApiError(null);
 				if (initialLoad) {
 					setSettingsForm(data.settings);
+					settingsFormRef.current = data.settings;
 					setInitialLoad(false);
 				}
 				logUi(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
@@ -814,6 +818,7 @@ export default function Dashboard() {
 									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
 									step={0.25}
 									disabled={dataUnavailable}
+									autoComplete="off"
 								/>
 							</div>
 							<div className="w-full">
@@ -825,6 +830,7 @@ export default function Dashboard() {
 									className={getInputClass(settingsForm.maxVr, status?.settings.maxVr)}
 									step={1}
 									disabled={dataUnavailable}
+									autoComplete="off"
 								/>
 							</div>
 							<div className="w-full">
@@ -836,6 +842,7 @@ export default function Dashboard() {
 									className={getInputClass(settingsForm.coreVoltage, status?.settings.coreVoltage)}
 									step={5}
 									disabled={dataUnavailable}
+									autoComplete="off"
 								/>
 							</div>
 							<div className="w-full">
@@ -847,6 +854,7 @@ export default function Dashboard() {
 									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
 									step={6.25}
 									disabled={dataUnavailable}
+									autoComplete="off"
 								/>
 							</div>
 						</form>
