@@ -6,6 +6,7 @@ import { Modal, useModal } from '../components/Modal';
 import { AnimatedBanner } from '../components/AnimatedBanner';
 import { logUi } from '../utils/logger';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
+import { Trash2, Play, Square, BarChart3, RefreshCw } from 'lucide-react';
 
 interface GraphDataEntry {
 	timestamp: string;
@@ -795,8 +796,9 @@ export default function Dashboard() {
 								<button
 									onClick={handleResetData}
 									disabled={dataUnavailable}
-									className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+									className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
+									<Trash2 className="w-4 h-4" />
 									Clear Historical Data
 								</button>
 							</div>
@@ -852,8 +854,9 @@ export default function Dashboard() {
 							<button
 								onClick={handleToggleSweep}
 								disabled={dataUnavailable}
-								className="flex-1 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex items-center justify-center gap-2 flex-1 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 							>
+								{status?.sweepMode ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
 								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
 							</button>
 							<button
@@ -953,9 +956,10 @@ export default function Dashboard() {
 									);
 									await showAnalysis('Hashrange Analysis Results', content);
 								}}
-								className="flex-1 px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex items-center justify-center gap-2 flex-1 px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								disabled={dataUnavailable}
 							>
+								<BarChart3 className="w-4 h-4" />
 								Analyse Hashrange
 							</button>
 						</div>
@@ -1004,8 +1008,9 @@ export default function Dashboard() {
 								</div>
 								<button
 									onClick={fetchGraphData}
-									className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+									className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
 								>
+									<RefreshCw className="w-4 h-4" />
 									Refresh
 								</button>
 							</div>
