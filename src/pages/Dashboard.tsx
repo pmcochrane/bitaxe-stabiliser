@@ -992,17 +992,16 @@ export default function Dashboard() {
 				</div>
 
 				{/* Graph panel */}
-				{graphData.length > 0 && (
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
-						<div className="flex justify-between items-center mb-4">
-							<h2 className="text-lg font-semibold dark:text-white">
-								{graphHours === 0.25 ? 'Last 15 Minutes' : 
-							 graphHours === 0.5 ? 'Last 30 Minutes' : 
-							 graphHours === 1 ? 'Last 1 Hour' : 
-							 graphHours === 2 ? 'Last 2 Hours' : 
-							 graphHours === 4 ? 'Last 4 Hours' : 
-							 graphHours === 8 ? 'Last 8 Hours' : 
-							 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
+				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
+					<div className="flex justify-between items-center mb-4">
+						<h2 className="text-lg font-semibold dark:text-white">
+							{graphHours === 0.25 ? 'Last 15 Minutes' : 
+						 graphHours === 0.5 ? 'Last 30 Minutes' : 
+						 graphHours === 1 ? 'Last 1 Hour' : 
+						 graphHours === 2 ? 'Last 2 Hours' : 
+						 graphHours === 4 ? 'Last 4 Hours' : 
+						 graphHours === 8 ? 'Last 8 Hours' : 
+						 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
 						</h2>
 							<div className="flex items-center gap-4">
 								<div className="flex gap-1 text-sm">
@@ -1038,8 +1037,8 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</div>
-						<div className="h-[640px]">
-							<div className={`w-full h-full transition-opacity duration-300 ${graphRefreshing ? 'opacity-0' : 'opacity-100'}`}>
+						<div className="h-[640px] relative">
+							<div className={`absolute inset-0 transition-opacity duration-300 ${graphData.length > 0 && !graphRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 								<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
@@ -1095,9 +1094,11 @@ export default function Dashboard() {
 								</ComposedChart>
 							</ResponsiveContainer>
 							</div>
+							<div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${graphData.length === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+								<p className="text-gray-500 dark:text-gray-400">No data to graph</p>
+							</div>
 						</div>
 					</div>
-				)}
 
 				{/* Historical Data Table */}
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-2">
