@@ -34,7 +34,16 @@ export default function Dashboard() {
 		stepDownDefault: -10,
 	});
 	const [initialLoad, setInitialLoad] = useState(true);
-	const [graphHours, setGraphHours] = useState(2);
+	const GRAPH_HOURS_KEY = 'bitaxe_graph_hours';
+	const getInitialGraphHours = (): number => {
+		const saved = localStorage.getItem(GRAPH_HOURS_KEY);
+		if (saved) {
+			const parsed = parseFloat(saved);
+			if (!isNaN(parsed) && parsed > 0) return parsed;
+		}
+		return 2;
+	};
+	const [graphHours, setGraphHours] = useState(getInitialGraphHours());
 	const [isPageVisible, setIsPageVisible] = useState(true);
 	const [isDarkMode, setIsDarkMode] = useState(false);
 	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
@@ -63,15 +72,12 @@ export default function Dashboard() {
 		return data.filter(entry => new Date(entry.timestamp) > cutoffTime);
 	}, []);
 
-	const loadCachedGraphData = useCallback((hours: number): GraphDataEntry[] => {
+	const loadCachedGraphData = useCallback((): GraphDataEntry[] => {
 		try {
 			const cached = localStorage.getItem(GRAPH_STORAGE_KEY);
 			if (cached) {
 				const allData: GraphDataEntry[] = JSON.parse(cached);
-				const cutoffTime = new Date();
-				cutoffTime.setHours(cutoffTime.getHours() - hours);
-				const filtered = allData.filter(entry => new Date(entry.timestamp) > cutoffTime);
-				return filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+				return allData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 			}
 		} catch (error) {
 			console.error('Failed to load cached graph data:', error);
@@ -87,6 +93,74 @@ export default function Dashboard() {
 			console.error('Failed to save graph data to cache:', error);
 		}
 	}, [cropOldEntries]);
+
+	const downsampleData = (data: GraphDataEntry[], targetPoints: number = 300): GraphDataEntry[] => {
+		if (data.length <= targetPoints) return data;
+		
+		const lttb = (points: GraphDataEntry[], threshold: number): GraphDataEntry[] => {
+			if (!points || points.length <= threshold) return points || [];
+			
+			const sampled: GraphDataEntry[] = [points[0]];
+			const len = points.length;
+			const bucketSize = (len - 1) / (threshold - 1);
+			
+			let a = 0;
+			
+			for (let i = 0; i < threshold - 1; i++) {
+				const bucketStart = Math.floor(i * bucketSize) + 1;
+				const bucketEnd = Math.floor((i + 1) * bucketSize) + 1;
+				
+				if (bucketStart >= len || bucketEnd > len) break;
+				if (a >= len) break;
+				
+				const pointA = points[a];
+				if (!pointA) break;
+				
+				let avgX = 0;
+				let avgY = 0;
+				let count = 0;
+				for (let j = bucketStart; j < bucketEnd && j < len; j++) {
+					if (points[j]) {
+						avgX += j;
+						avgY += points[j].temp;
+						count++;
+					}
+				}
+				if (count === 0) continue;
+				avgX /= count;
+				avgY /= count;
+				
+				let maxArea = -1;
+				let maxAreaPoint = bucketStart;
+				
+				for (let j = bucketStart; j < bucketEnd && j < len; j++) {
+					if (!points[j]) continue;
+					const area = Math.abs(
+						(a * (points[j].temp - avgY)) +
+						(j * (avgY - pointA.temp)) +
+						(avgX * (pointA.temp - points[j].temp))
+					);
+					
+					if (area > maxArea) {
+						maxArea = area;
+						maxAreaPoint = j;
+					}
+				}
+				
+				if (maxAreaPoint < len && points[maxAreaPoint]) {
+					sampled.push(points[maxAreaPoint]);
+					a = maxAreaPoint;
+				}
+			}
+			
+			if (sampled[sampled.length - 1] !== points[len - 1]) {
+				sampled.push(points[len - 1]);
+			}
+			return sampled;
+		};
+		
+		return lttb(data, targetPoints);
+	};
 
 	const clearGraphDataCache = useCallback(() => {
 		try {
@@ -118,22 +192,27 @@ export default function Dashboard() {
 			const randomId = Math.floor(Math.random() * 9000) + 1000;
 			const logPrefix = "[useCallback][fetchGraphData]["+randomId+"]";
 			const startTime = performance.now();
-			// logUi(logPrefix, 'Fetching graph data for last', graphHours, 'hours...');
+			
+			const isNewTimeRange = prevGraphHours.current !== graphHours;
+			prevGraphHours.current = graphHours;
+			const targetPoints = Math.max(50, Math.min(900, Math.round(graphHours * 60)));
+			const cutoffTime = new Date(Date.now() - graphHours * 60 * 60 * 1000);
+			
 			try {
-				const cachedData = loadCachedGraphData(graphHours);
-				const isNewTimeRange = prevGraphHours.current !== graphHours;
-				prevGraphHours.current = graphHours;
-				const latestTimestamp = !isNewTimeRange && cachedData.length > 0
-					? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
-						new Date(entry.timestamp) > new Date(latest) ? entry.timestamp : latest, cachedData[0].timestamp)
-					: undefined;
+				const cachedData = loadCachedGraphData();
+			const latestTimestamp = !isNewTimeRange && cachedData.length > 0
+				? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
+					new Date(entry.timestamp) > new Date(latest) ? entry.timestamp : latest, cachedData[0].timestamp)
+				: undefined;
 
-				const data = await getHistoryGraph(graphHours, latestTimestamp);
+			const data = await getHistoryGraph(graphHours, latestTimestamp);
 				
 				if (data.length === 0) {
 					logUi(logPrefix, 'No new data - using cache');
 					if (cachedData.length > 0) {
-						setGraphData(cachedData);
+						const filteredForDisplay = cachedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+						const displayData = downsampleData(filteredForDisplay, targetPoints);
+						setGraphData(displayData);
 					}
 					return;
 				}
@@ -147,74 +226,6 @@ export default function Dashboard() {
 					stepDownFilled: d.stepDown,
 				}));
 
-					const downsampleData = (data: GraphDataEntry[], targetPoints: number = 300): GraphDataEntry[] => {
-					if (data.length <= targetPoints) return data;
-					
-					const lttb = (points: GraphDataEntry[], threshold: number): GraphDataEntry[] => {
-						if (!points || points.length <= threshold) return points || [];
-						
-						const sampled: GraphDataEntry[] = [points[0]];
-						const len = points.length;
-						const bucketSize = (len - 1) / (threshold - 1);
-						
-						let a = 0;
-						
-						for (let i = 0; i < threshold - 1; i++) {
-							const bucketStart = Math.floor(i * bucketSize) + 1;
-							const bucketEnd = Math.floor((i + 1) * bucketSize) + 1;
-							
-							if (bucketStart >= len || bucketEnd > len) break;
-							if (a >= len) break;
-							
-							const pointA = points[a];
-							if (!pointA) break;
-							
-							let avgX = 0;
-							let avgY = 0;
-							let count = 0;
-							for (let j = bucketStart; j < bucketEnd && j < len; j++) {
-								if (points[j]) {
-									avgX += j;
-									avgY += points[j].temp;
-									count++;
-								}
-							}
-							if (count === 0) continue;
-							avgX /= count;
-							avgY /= count;
-							
-							let maxArea = -1;
-							let maxAreaPoint = bucketStart;
-							
-							for (let j = bucketStart; j < bucketEnd && j < len; j++) {
-								if (!points[j]) continue;
-								const area = Math.abs(
-									(a * (points[j].temp - avgY)) +
-									(j * (avgY - pointA.temp)) +
-									(avgX * (pointA.temp - points[j].temp))
-								);
-								
-								if (area > maxArea) {
-									maxArea = area;
-									maxAreaPoint = j;
-								}
-							}
-							
-							if (maxAreaPoint < len && points[maxAreaPoint]) {
-								sampled.push(points[maxAreaPoint]);
-								a = maxAreaPoint;
-							}
-						}
-						
-						if (sampled[sampled.length - 1] !== points[len - 1]) {
-							sampled.push(points[len - 1]);
-						}
-						return sampled;
-					};
-					
-					return lttb(data, targetPoints);
-				};
-
 				let mergedData: GraphDataEntry[];
 				if (cachedData.length === 0) {
 					mergedData = transformed;
@@ -226,12 +237,12 @@ export default function Dashboard() {
 					);
 				}
 
-				const downsampledData = downsampleData(mergedData, 900);
-				saveGraphDataToCache(downsampledData);
-				setGraphData(downsampledData);
-				const firstTime = mergedData.length > 0 ? mergedData[0].timestamp : 'none';
-				const lastTime = mergedData.length > 0 ? mergedData[mergedData.length - 1].timestamp : 'none';
-				logUi(logPrefix, graphHours+"h chart:", 'New:', data.length, 'Total:', mergedData.length, 'Downsampled:', downsampledData.length, 'First:', firstTime, 'Last:', lastTime, `[took ${Math.round(performance.now() - startTime)}ms]`);
+				const downsampledData = downsampleData(mergedData, targetPoints);
+				saveGraphDataToCache(mergedData);
+				const filteredForDisplay = mergedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+				const displayData = downsampleData(filteredForDisplay, targetPoints);
+				setGraphData(displayData);
+				logUi(logPrefix, graphHours+"h chart:", 'New:', data.length, 'Cached:', cachedData.length, 'Total:', mergedData.length, 'Filtered:', filteredForDisplay.length, 'Downsampled:', displayData.length, 'TargetPoints:', targetPoints, `[took ${Math.round(performance.now() - startTime)}ms]`);
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch graph data:', error);
 			}
@@ -278,9 +289,13 @@ export default function Dashboard() {
 	useEffect(() => {
 		const logPrefix="[loadCachedGraphData]";
 		const startTime = performance.now();
-		const cachedData = loadCachedGraphData(graphHours);
+		const cachedData = loadCachedGraphData();
+		const cutoffTime = new Date(Date.now() - graphHours * 60 * 60 * 1000);
+		const targetPoints = Math.max(50, Math.min(900, Math.round(graphHours * 60)));
 		if (cachedData.length > 0) {
-			setGraphData(cachedData);
+			const filteredForDisplay = cachedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+			const displayData = downsampleData(filteredForDisplay, targetPoints);
+			setGraphData(displayData);
 		}
 		logUi(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
 	}, [graphHours, loadCachedGraphData]);
@@ -288,6 +303,10 @@ export default function Dashboard() {
 	useEffect(() => {
 		fetchGraphData();
 	}, [fetchGraphData]);
+
+	useEffect(() => {
+		localStorage.setItem(GRAPH_HOURS_KEY, graphHours.toString());
+	}, [graphHours]);
 
 	useEffect(() => {
 		const lastDisclaimerDate = localStorage.getItem('disclaimerLastDismissed');
@@ -931,14 +950,22 @@ export default function Dashboard() {
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
 						<div className="flex justify-between items-center mb-4">
 							<h2 className="text-lg font-semibold dark:text-white">
-								{graphHours === 1 ? 'Last 1 Hour' : 
-								 graphHours === 2 ? 'Last 2 Hours' : 
-								 graphHours === 4 ? 'Last 4 Hours' : 
-								 graphHours === 8 ? 'Last 8 Hours' : 
-								 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
-							</h2>
+								{graphHours === 0.25 ? 'Last 15 Minutes' : 
+							 graphHours === 0.5 ? 'Last 30 Minutes' : 
+							 graphHours === 1 ? 'Last 1 Hour' : 
+							 graphHours === 2 ? 'Last 2 Hours' : 
+							 graphHours === 4 ? 'Last 4 Hours' : 
+							 graphHours === 8 ? 'Last 8 Hours' : 
+							 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
+						</h2>
 							<div className="flex items-center gap-4">
 								<div className="flex gap-2 text-sm dark:text-white">
+									<label className="flex items-center gap-1">
+										<input type="radio" name="graphHours" checked={graphHours === 0.25} onChange={() => setGraphHours(0.25)} /> 15m
+									</label>
+									<label className="flex items-center gap-1">
+										<input type="radio" name="graphHours" checked={graphHours === 0.5} onChange={() => setGraphHours(0.5)} /> 30m
+									</label>
 									<label className="flex items-center gap-1">
 										<input type="radio" name="graphHours" checked={graphHours === 1} onChange={() => setGraphHours(1)} /> 1h
 									</label>
