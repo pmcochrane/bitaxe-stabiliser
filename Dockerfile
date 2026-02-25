@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+COPY README.md public/
 RUN npm run build
 
 # ───────────────────────────────────────────────
@@ -20,6 +21,7 @@ RUN apk add --no-cache tini
 
 COPY --from=builder /app/dist       ./dist
 COPY --from=builder /app/public     ./public
+COPY --from=builder /app/README.md  ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
