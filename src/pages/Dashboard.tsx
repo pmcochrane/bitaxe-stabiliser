@@ -38,6 +38,8 @@ export default function Dashboard() {
 	const [isPageVisible, setIsPageVisible] = useState(true);
 	const [isDarkMode, setIsDarkMode] = useState(false);
 	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
+	const [dismissHashrateAlert, setDismissHashrateAlert] = useState(false);
+	const [dismissLowStepAlert, setDismissLowStepAlert] = useState(false);
 	const { modalState, showConfirm, showAlert, showAnalysis, closeModal } = useModal();
 	const prevGraphHours = useRef(graphHours);
 
@@ -500,7 +502,7 @@ export default function Dashboard() {
 						</AnimatedBanner>
 
 						{/* Hashrate warning alert */}
-						<AnimatedBanner show={!!(current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0))} className="mb-4">
+						<AnimatedBanner show={!!(current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
@@ -590,7 +592,7 @@ export default function Dashboard() {
 						)}
 
 						{/* Low step warning alert */}
-						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode} className="mt-3">
+						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode && !dismissLowStepAlert} className="mt-3 relative" onDismiss={() => setDismissLowStepAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Failing to attain the desired frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<ul className="list-disc ml-5 mt-2 text-sm">
