@@ -1004,7 +1004,7 @@ export default function Dashboard() {
 						 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
 						</h2>
 							<div className="flex items-center gap-4">
-								<div className="flex gap-1 text-sm">
+								<div className="flex text-sm">
 									{[
 										{ value: 0.25, label: '15m' },
 										{ value: 0.5, label: '30m' },
@@ -1014,11 +1014,13 @@ export default function Dashboard() {
 										{ value: 8, label: '8h' },
 										{ value: 24, label: '1d' },
 										{ value: 48, label: '2d' },
-									].map((option) => (
+									].map((option, index, arr) => (
 										<button
 											key={option.value}
 											onClick={() => setGraphHours(option.value)}
-											className={`px-3 py-1 rounded transition-colors ${
+											className={`px-3 py-1 transition-colors ${
+												index === 0 ? 'rounded-l' : index === arr.length - 1 ? 'rounded-r' : 'rounded-none'
+											} ${
 												graphHours === option.value
 													? 'bg-green-500 text-black'
 													: 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
