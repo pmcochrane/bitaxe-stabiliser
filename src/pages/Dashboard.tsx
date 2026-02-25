@@ -21,6 +21,7 @@ export default function Dashboard() {
 	const [loading, setLoading] = useState(true);
 	const [showDisclaimer, setShowDisclaimer] = useState(false);
 	const [graphData, setGraphData] = useState<GraphDataEntry[]>([]);
+	const [graphRefreshing, setGraphRefreshing] = useState(false);
 	const [settingsForm, setSettingsForm] = useState<Settings>({
 		ip: '',
 		hostname: '',
@@ -195,7 +196,19 @@ export default function Dashboard() {
 			
 			const isNewTimeRange = prevGraphHours.current !== graphHours;
 			prevGraphHours.current = graphHours;
-			const targetPoints = Math.max(50, Math.min(900, Math.round(graphHours * 60)));
+			
+			if (isNewTimeRange) {
+				setGraphRefreshing(true);
+			}
+		let basePoints: number;
+		if (graphHours <= 0.5) {
+			basePoints = graphHours * 1200;
+		} else if (graphHours < 1) {
+			basePoints = 600 + (graphHours - 0.5) * 600;
+		} else {
+			basePoints = 900;
+		}
+		const targetPoints = Math.max(50, Math.min(900, Math.round(basePoints)));
 			const cutoffTime = new Date(Date.now() - graphHours * 60 * 60 * 1000);
 			
 			try {
@@ -214,6 +227,7 @@ export default function Dashboard() {
 						const displayData = downsampleData(filteredForDisplay, targetPoints);
 						setGraphData(displayData);
 					}
+					setGraphRefreshing(false);
 					return;
 				}
 
@@ -242,9 +256,11 @@ export default function Dashboard() {
 				const filteredForDisplay = mergedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
 				const displayData = downsampleData(filteredForDisplay, targetPoints);
 				setGraphData(displayData);
+				setGraphRefreshing(false);
 				logUi(logPrefix, graphHours+"h chart:", 'New:', data.length, 'Cached:', cachedData.length, 'Total:', mergedData.length, 'Filtered:', filteredForDisplay.length, 'Downsampled:', displayData.length, 'TargetPoints:', targetPoints, `[took ${Math.round(performance.now() - startTime)}ms]`);
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch graph data:', error);
+				setGraphRefreshing(false);
 			}
 		});
 	}, [graphHours, loadCachedGraphData, saveGraphDataToCache, withApiLock]);
@@ -291,12 +307,21 @@ export default function Dashboard() {
 		const startTime = performance.now();
 		const cachedData = loadCachedGraphData();
 		const cutoffTime = new Date(Date.now() - graphHours * 60 * 60 * 1000);
-		const targetPoints = Math.max(50, Math.min(900, Math.round(graphHours * 60)));
+		let basePoints: number;
+		if (graphHours <= 0.5) {
+			basePoints = graphHours * 1200;
+		} else if (graphHours < 1) {
+			basePoints = 600 + (graphHours - 0.5) * 600;
+		} else {
+			basePoints = 900;
+		}
+		const targetPoints = Math.max(50, Math.min(900, Math.round(basePoints)));
 		if (cachedData.length > 0) {
 			const filteredForDisplay = cachedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
 			const displayData = downsampleData(filteredForDisplay, targetPoints);
 			setGraphData(displayData);
 		}
+		setGraphRefreshing(false);
 		logUi(logPrefix, `[took ${Math.round(performance.now() - startTime)}ms]`);
 	}, [graphHours, loadCachedGraphData]);
 
@@ -993,7 +1018,7 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</div>
-						<div className="h-[640px]">
+						<div className={`h-[640px] transition-opacity duration-300 ${graphRefreshing ? 'opacity-0' : 'opacity-100'}`}>
 							<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
