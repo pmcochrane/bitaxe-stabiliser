@@ -4,7 +4,7 @@ x-base: &base               # ← note the x- prefix
   build:
     context: .
   volumes:
-    - ./data:/app/data
+    - ./deviceData:/app/deviceData
   # environment: 
       # - BITAXE_HOSTNAME=${BITAXE_HOSTNAME:-}
       # - PORT=${PORT:-3000}

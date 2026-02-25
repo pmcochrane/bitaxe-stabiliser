@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { StatusResponse, Settings, ControlCommand, HistoryResponse, HistoryEntry } from '../types';
+import type { StatusResponse, Settings, ControlCommand, HistoryResponse, HistoryEntry } from '../../both/types';
 
 const api = axios.create({
 	baseURL: '/api',

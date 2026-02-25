@@ -31,4 +31,4 @@ ENV PORT=3000
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server/index.js"]

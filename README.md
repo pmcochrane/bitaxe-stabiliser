@@ -12,7 +12,7 @@ A web-based Bitaxe monitoring and control application. The application automatic
 
 - **Temperature Stabilisation**: Automatically adjusts ASIC frequency to maintain target temperature
 - **Real-time Monitoring**: View hashrate, temperature, voltage, power, and efficiency in real-time
-- **Historical Data**: Store and visualize historical performance data
+- **Historical Data**: Store and visualize historical performance deviceData
 - **Sweep Mode**: Test different frequency/voltage combinations to find optimal settings
 - **Hashrange Analysis**: Analyze sweep results to identify best configurations for different use cases
 
@@ -58,8 +58,8 @@ The only required configuration is setting the **BITAXE_IP** environment variabl
 
 You can select any port to run the server on. By default it is port 3001 but you can change this by editing the ports line to be **- "1234:3000"** to run on locahost:1024. When the docker service is started, navigate to <http://localhost:3001> and you will see the **Bitaxe Stabiliser** UI.
 
-The data volume is required to persist your settings between restarts. By default, all settings and data will be stored in a **data** folder where the **docker-compose.yml** files is located.
-In **data**, you should find a subfolder for each bitaxe you point the application to monitor.
+The deviceData volume is required to persist your settings between restarts. By default, all settings and deviceData will be stored in a **deviceData** folder where the **docker-compose.yml** files is located.
+In **deviceData**, you should find a subfolder for each bitaxe you point the application to monitor.
 
 If you have more than one bitaxe, you can add multiple instances of the application each pointing to a different BITAXE_IP address. Copy the entire block (bitaxe-stabiliser-1) and paste it below and ensure the indentaion is the same.
 Rename the second service to bitaxe-stabiliser-2 and select a different port for the second UI instance.
@@ -82,24 +82,24 @@ services:
     ports:
       - "3001:3000"
     volumes:
-      - ./data:/app/data
+      - ./deviceData:/app/deviceData
     restart: unless-stopped
 ```
 
 ## Environment Variables
 
-There are other environment variable that can be set in your config file. There is no need to pass these as the will default to match your current bitaxe settings and any changes you make will persist between restarts (because of data volume).
+There are other environment variable that can be set in your config file. There is no need to pass these as the will default to match your current bitaxe settings and any changes you make will persist between restarts (because of deviceData volume).
 
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
 | BITAXE_IP | IP address of the Bitaxe (required) | |
-| BITAXE_HOSTNAME | Hostname for data folder | Falls back to IP if bitaxe API does not return a value |
+| BITAXE_HOSTNAME | Hostname for deviceData folder | Falls back to IP if bitaxe API does not return a value |
 | TARGET_ASIC | Target ASIC temp (°C) | 65 |
 | MAX_VR | Max VR temp (°C) | 80 |
 | CORE_VOLTAGE | Core voltage (mV) | Normally inherits current bitaxe setting (else 1150) |
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
 | PORT | Server port | 3000 |
-| HISTORY_LIMIT | Max history entries | 172800 (2 days worth of data) |
+| HISTORY_LIMIT | Max history entries | 172800 (2 days worth of deviceData) |
 | STEP_DOWN_DEFAULT | Default Stepdown value | applied at server startup |
 
 ## Building the docker image manually
@@ -116,18 +116,18 @@ docker build -t bitaxe-stabiliser .
 docker run -d \
   -p 3001:3000 \
   -e BITAXE_IP=192.168.1.100 \
-  -v $(pwd)/data:/app/data \
+  -v $(pwd)/deviceData:/app/deviceData \
   bitaxe-stabiliser
 ```
 
 ## Data Storage Volume
 
-The application stores data in a volume mounted at `./data` on the host. This will include several files in a folder named after the bitaxe hostname or IP address if the hostname cannot be determined from the bitaxe's API.
+The application stores deviceData in a volume mounted at `./deviceData` on the host. This will include several files in a folder named after the bitaxe hostname or IP address if the hostname cannot be determined from the bitaxe's API.
 
 These files & settings will persist between docker sessions if you mount a volume as indicated in the docker compose file above.
 
 - `settings.json` - Application settings
-- `history.json` - Historical performance data
+- `history.json` - Historical performance deviceData
 - `hashrange.json` - Sweep mode results
 - `events.json` - System events log
 
@@ -161,7 +161,7 @@ The main page shows:
 
 ### History
 
-Historical data view with:
+Historical deviceData view with:
 
 - Paginated table of all readings
 - Date range navigation

@@ -33,13 +33,13 @@ const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(pro
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 
 async function getDataDir(): Promise<string> {
-	let retval=`./data/${BITAXE_IP}`;
+	let retval=`./deviceData/${BITAXE_IP}`;
 	
 	if (BITAXE_HOSTNAME==="") {
 		logIndex("Attempt to retrieve the bitaxe hostname from the API");
 		try {
 			const response = await axios.get(`http://${BITAXE_IP}/api/system/info`, { timeout: 5000 });
-			retval=`./data/${response.data.hostname || BITAXE_IP}`;
+			retval=`./deviceData/${response.data.hostname || BITAXE_IP}`;
 			BITAXE_HOSTNAME=response.data.hostname || BITAXE_IP;
 			logIndex("Successfully retrieved the bitaxe hostname from the API: " + response.data.hostname);
 		} catch (error) {
@@ -191,21 +191,21 @@ async function main() {
 
 	const isDev = process.env.NODE_ENV !== 'production';
 
-	app.use('/package.json', express.static(path.join(__dirname, '../package.json')));
-	app.use('/readme.md', express.static(path.join(__dirname, '../README.md')));
+	app.use('/package.json', express.static(path.join(__dirname, '../../package.json')));
+	app.use('/readme.md', express.static(path.join(__dirname, '../../README.md')));
 
 	if (!isDev) {
-		app.use(express.static('public'));
+		app.use(express.static('dist/client'));
 
 		app.get('*', (req, res) => {
 			if (!req.path.startsWith('/api')) {
-				res.sendFile(path.join(__dirname, '../public/index.html'));
+				res.sendFile(path.join(__dirname, '../client/index.html'));
 			}
 		});
 	} else {
 		app.get('*', (req, res) => {
 			if (!req.path.startsWith('/api') && !req.path.startsWith('/readme') && !req.path.startsWith('/package')) {
-				res.sendFile(path.join(__dirname, '../public/index.html'));
+				res.sendFile(path.join(__dirname, '../../index.html'));
 			}
 		});
 	}

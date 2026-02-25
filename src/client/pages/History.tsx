@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getHistory, getHistoryPages, getSettings } from '../services/api';
-import type { HistoryEntry, HistoryResponse, Settings } from '../types';
+import type { HistoryEntry, HistoryResponse, Settings } from '../../both/types';
 import { Modal, useModal } from '../components/Modal';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
 
