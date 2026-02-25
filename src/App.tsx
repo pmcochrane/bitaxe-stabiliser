@@ -54,8 +54,14 @@ function App() {
 		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
 			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-4">
 				<div className="container mx-auto flex justify-between items-center">
-					<div className="flex items-center gap-4">
-						<h1 className="text-xl font-bold">Bitaxe Stabiliser &nbsp;
+					<div className="flex items-center gap-2">
+						<img
+							src="/Bitaxe.png"
+							alt="Bitaxe"
+							className="h-8 brightness-0 invert"
+						/>
+						<h1 className="text-3xl font-bold self-center leading-none">Stabiliser</h1>
+						<h1 className="text-xl font-bold self-center leading-none">
 							{isDev && <span className="px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV Server</span>} &nbsp;
 							{hostname && <span className="text-sm text-gray-400">{hostname}</span>} &nbsp;
 							{ip && (

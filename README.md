@@ -100,6 +100,7 @@ There are other environment variable that can be set in your config file. There 
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
 | PORT | Server port | 3000 |
 | HISTORY_LIMIT | Max history entries | 172800 (2 days worth of data) |
+| STEP_DOWN_DEFAULT | Default Stepdown value | applied at server startup |
 
 ## Building the docker image manually
 

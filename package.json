@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "predev": "npm run build",
-    "build": "tsc && npm run build:react",
+    "build": "tsc && npm run build:react && npm run postbuild",
+    "postbuild": "cp static/Bitaxe.png public/",
     "build:react": "vite build",
     "build:watch": "vite build --watch",
     "start": "node dist/index.js",
