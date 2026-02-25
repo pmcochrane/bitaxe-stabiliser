@@ -40,6 +40,7 @@ export default function Dashboard() {
 	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
 	const [dismissHashrateAlert, setDismissHashrateAlert] = useState(false);
 	const [dismissLowStepAlert, setDismissLowStepAlert] = useState(false);
+	const [apiError, setApiError] = useState<string | null>(null);
 	const { modalState, showConfirm, showAlert, showAnalysis, closeModal } = useModal();
 	const prevGraphHours = useRef(graphHours);
 
@@ -248,6 +249,7 @@ export default function Dashboard() {
 			try {
 				const data = await getStatus();
 				setStatus(data);
+				setApiError(null);
 				if (initialLoad) {
 					setSettingsForm(data.settings);
 					setInitialLoad(false);
@@ -258,6 +260,7 @@ export default function Dashboard() {
 				}
 			} catch (error) {
 				logUi(logPrefix, 'Failed to fetch status:', error);
+				setApiError(error instanceof Error ? error.message : 'Unknown error');
 			} finally {
 				setLoading(false);
 			}
@@ -445,6 +448,7 @@ export default function Dashboard() {
 
 	const current = status?.current;
 	const bitaxeOffline = status?.bitaxeReachable === false;
+	const dataUnavailable = !!apiError || bitaxeOffline;
 
 	return (
 		<>
@@ -484,9 +488,20 @@ export default function Dashboard() {
 					{/* Current Bitaxe Status */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
+						{/* API error alert */}
+						<AnimatedBanner show={!!apiError} className="mb-4">
+							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded">
+								<strong>⚠️ Server API Error</strong>
+								<br />
+								The application is currently unable to communicate with the Bitaxe Stabiliser server. 
+								<br /><br />This may be due to the server being offline, a network issue, or an internal error in the application.
+								<br />Error: <span className="text-sm font-normal">{apiError}</span>
+							</div>
+						</AnimatedBanner>
+
 						{/* Communication error alert */}
 						<AnimatedBanner show={!!(status?.bitaxeReachable===false)} className="mb-4">
-							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
+							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded">
 								<strong>⚠️ Bitaxe is not Responding</strong>
 								<br />
 								The application is currently unable to communicate with your Bitaxe device on {status?.settings?.ip}. 
@@ -502,7 +517,7 @@ export default function Dashboard() {
 						</AnimatedBanner>
 
 						{/* Hashrate warning alert */}
-						<AnimatedBanner show={!!(current && status?.bitaxeReachable===true && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
+						<AnimatedBanner show={!!(current && !dataUnavailable && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
@@ -518,13 +533,13 @@ export default function Dashboard() {
 						</AnimatedBanner>
 
 						{/* Overheat alert */}
-						<AnimatedBanner show={current?.overheatMode && status?.bitaxeReachable !== false} className="mb-4">
+						<AnimatedBanner show={current?.overheatMode && !dataUnavailable} className="mb-4">
 							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded font-bold">
 								<strong className="text-lg">⚠️ Bitaxe has overheated</strong>
 								<br />You will need to manually reset the device to clear this error.
 							</div>
 						</AnimatedBanner>
-						{current && status?.bitaxeReachable !== false ? (
+						{current && !dataUnavailable ? (
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
@@ -585,6 +600,8 @@ export default function Dashboard() {
 									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(2)} J/TH</div>
 								</div>
 							</div>
+						) : apiError ? (
+							<div className="text-gray-500 dark:text-white">Waiting for server API...</div>
 						) : status?.bitaxeReachable === false ? (
 							<div className="text-gray-500 dark:text-white">Waiting for bitaxe to respond on {status.settings.ip}...</div>
 						) : (
@@ -592,7 +609,7 @@ export default function Dashboard() {
 						)}
 
 						{/* Low step warning alert */}
-						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode && !dismissLowStepAlert} className="mt-3 relative" onDismiss={() => setDismissLowStepAlert(true)}>
+						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode && !dataUnavailable && !dismissLowStepAlert} className="mt-3 relative" onDismiss={() => setDismissLowStepAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Failing to attain the desired frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<ul className="list-disc ml-5 mt-2 text-sm">
@@ -640,7 +657,7 @@ export default function Dashboard() {
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === true 
 									? 'border-green-500 bg-green-500 text-white' 
-									: bitaxeOffline
+									: dataUnavailable
 										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
 										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}>
@@ -648,16 +665,16 @@ export default function Dashboard() {
 									type="radio"
 									name="stabilise"
 									checked={status?.stabilise === true}
-									onChange={() => !bitaxeOffline && status?.stabilise !== true && handleToggleStabilise()}
+									onChange={() => !dataUnavailable && status?.stabilise !== true && handleToggleStabilise()}
 									className="hidden"
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Actively Adjust Temperature</span>
 							</label>
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === false 
 									? 'border-gray-400 bg-gray-400 text-white' 
-									: bitaxeOffline
+									: dataUnavailable
 										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
 										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}>
@@ -665,9 +682,9 @@ export default function Dashboard() {
 									type="radio"
 									name="stabilise"
 									checked={status?.stabilise === false}
-									onChange={() => !bitaxeOffline && status?.stabilise !== false && handleToggleStabilise()}
+									onChange={() => !dataUnavailable && status?.stabilise !== false && handleToggleStabilise()}
 									className="hidden"
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 								<span className={status?.stabilise === false ? 'text-white' : 'dark:text-white'}>No Stabilisation</span>
 							</label>
@@ -681,14 +698,14 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustFreq(1)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Step +
 								</button>
 								<button
 									onClick={() => handleAdjustFreq(-1)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Step -
@@ -697,14 +714,14 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustVoltage(5)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Voltage +
 								</button>
 								<button
 									onClick={() => handleAdjustVoltage(-5)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Voltage -
@@ -713,14 +730,14 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={() => handleAdjustMaxFreq(6.25)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Max Freq +
 								</button>
 								<button
 									onClick={() => handleAdjustMaxFreq(-6.25)}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Max Freq -
@@ -729,14 +746,14 @@ export default function Dashboard() {
 							<div className="flex flex-col gap-2">
 								<button
 									onClick={handleToggleSweep}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
 								</button>
 								<button
 									onClick={handleResetData}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 									className="px-4 py-2 bg-red-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Clear Historical Data
@@ -753,7 +770,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
 									step={0.25}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 							</div>
 							<div className="w-full">
@@ -764,7 +781,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxVr: parseInt(e.target.value) })}
 									className={getInputClass(settingsForm.maxVr, status?.settings.maxVr)}
 									step={1}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 							</div>
 							<div className="w-full">
@@ -775,7 +792,7 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, coreVoltage: parseInt(e.target.value) })}
 									className={getInputClass(settingsForm.coreVoltage, status?.settings.coreVoltage)}
 									step={5}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 							</div>
 							<div className="w-full">
@@ -786,11 +803,11 @@ export default function Dashboard() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, maxFreq: parseFloat(e.target.value) })}
 									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
 									step={6.25}
-									disabled={bitaxeOffline}
+									disabled={dataUnavailable}
 								/>
 							</div>
 							<div className="md:col-span-1 flex items-end justify-end">
-								<button type="submit" disabled={bitaxeOffline} className="px-4 py-1 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+								<button type="submit" disabled={dataUnavailable} className="px-4 py-1 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
 									Save Defaults
 								</button>
 							</div>
@@ -894,7 +911,7 @@ export default function Dashboard() {
 									await showAnalysis('Hashrange Analysis Results', content);
 								}}
 								className="px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-								disabled={bitaxeOffline}
+								disabled={dataUnavailable}
 							>
 								Analyse Hashrange
 							</button>
