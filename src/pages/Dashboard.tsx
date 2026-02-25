@@ -67,6 +67,25 @@ export default function Dashboard() {
 	const [apiError, setApiError] = useState<string | null>(null);
 	const { modalState, showConfirm, showAlert, showAnalysis, closeModal } = useModal();
 	const prevGraphHours = useRef(graphHours);
+	const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+	const settingsChangedRef = useRef(false);
+
+	const handleSettingChange = (key: keyof Settings, value: number) => {
+		setSettingsForm((prev) => ({ ...prev, [key]: value }));
+		settingsChangedRef.current = true;
+		if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+		saveDebounceRef.current = setTimeout(async () => {
+			if (settingsChangedRef.current) {
+				settingsChangedRef.current = false;
+				try {
+					await updateSettings(settingsForm);
+					fetchStatus();
+				} catch (error) {
+					console.error('Failed to save settings:', error);
+				}
+			}
+		}, 1000);
+	};
 
 	useEffect(() => {
 		const observer = new MutationObserver(() => {
@@ -447,18 +466,6 @@ export default function Dashboard() {
 		setTimeout(fetchStatus, 100);
 	};
 
-	const handleAdjustVoltage = async (delta: number) => {
-		sendControl({ action: 'adjustVoltage', value: delta });
-		setSettingsForm(prev => ({ ...prev, coreVoltage: prev.coreVoltage + delta }));
-		setTimeout(fetchStatus, 100);
-	};
-
-	const handleAdjustMaxFreq = async (delta: number) => {
-		updateSettings({ maxFreq: settingsForm.maxFreq + delta });
-		setSettingsForm(prev => ({ ...prev, maxFreq: prev.maxFreq + delta }));
-		setTimeout(fetchStatus, 100);
-	};
-
 	const handleToggleSweep = async () => {
 		if (!status) return;
 		if (status.sweepMode) {
@@ -495,13 +502,6 @@ export default function Dashboard() {
 			setTimeout(fetchStatus, 100);
 			setTimeout(fetchGraphData, 200);
 		}
-	};
-
-	const handleSettingsSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		updateSettings(settingsForm);
-		await showAlert('Settings Saved', 'Your settings have been saved successfully.<br />Note that your enviroment / docker startup file may override these settings on application restart if you have set them there.');
-		fetchStatus();
 	};
 
 	const isValueChanged = (formValue: number, storedValue: number | undefined) => {
@@ -773,8 +773,8 @@ export default function Dashboard() {
 					{/* Manual Control and Settings Form */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
-						<div className="flex flex-wrap gap-4 mb-4">
-							<div className="flex flex-col gap-2">
+						<div className="flex flex-wrap gap-4 mb-4 items-center">
+							<div className="flex gap-2">
 								<button
 									onClick={() => handleAdjustFreq(1)}
 									disabled={dataUnavailable}
@@ -790,46 +790,8 @@ export default function Dashboard() {
 									Step -
 								</button>
 							</div>
-							<div className="flex flex-col gap-2">
-								<button
-									onClick={() => handleAdjustVoltage(5)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Voltage +
-								</button>
-								<button
-									onClick={() => handleAdjustVoltage(-5)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-purple-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Voltage -
-								</button>
-							</div>
-							<div className="flex flex-col gap-2">
-								<button
-									onClick={() => handleAdjustMaxFreq(6.25)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Max Freq +
-								</button>
-								<button
-									onClick={() => handleAdjustMaxFreq(-6.25)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Max Freq -
-								</button>
-							</div>
-							<div className="flex flex-col gap-2">
-								<button
-									onClick={handleToggleSweep}
-									disabled={dataUnavailable}
-									className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
-								</button>
+							<div className="flex-1"></div>
+							<div>
 								<button
 									onClick={handleResetData}
 									disabled={dataUnavailable}
@@ -840,13 +802,13 @@ export default function Dashboard() {
 							</div>
 						</div>
 
-						<form onSubmit={handleSettingsSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-2">
+						<form className="grid grid-cols-2 md:grid-cols-4 gap-2">
 							<div className="w-full">
 								<label className="block text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Target ASIC (°C)</label>
 								<input
 									type="number"
 									value={settingsForm.targetAsic}
-									onChange={(e) => setSettingsForm({ ...settingsForm, targetAsic: parseFloat(e.target.value) })}
+									onChange={(e) => handleSettingChange('targetAsic', parseFloat(e.target.value))}
 									className={getInputClass(settingsForm.targetAsic, status?.settings.targetAsic)}
 									step={0.25}
 									disabled={dataUnavailable}
@@ -857,7 +819,7 @@ export default function Dashboard() {
 								<input
 									type="number"
 									value={settingsForm.maxVr}
-									onChange={(e) => setSettingsForm({ ...settingsForm, maxVr: parseInt(e.target.value) })}
+									onChange={(e) => handleSettingChange('maxVr', parseInt(e.target.value))}
 									className={getInputClass(settingsForm.maxVr, status?.settings.maxVr)}
 									step={1}
 									disabled={dataUnavailable}
@@ -868,7 +830,7 @@ export default function Dashboard() {
 								<input
 									type="number"
 									value={settingsForm.coreVoltage}
-									onChange={(e) => setSettingsForm({ ...settingsForm, coreVoltage: parseInt(e.target.value) })}
+									onChange={(e) => handleSettingChange('coreVoltage', parseInt(e.target.value))}
 									className={getInputClass(settingsForm.coreVoltage, status?.settings.coreVoltage)}
 									step={5}
 									disabled={dataUnavailable}
@@ -879,19 +841,21 @@ export default function Dashboard() {
 								<input
 									type="number"
 									value={settingsForm.maxFreq}
-									onChange={(e) => setSettingsForm({ ...settingsForm, maxFreq: parseFloat(e.target.value) })}
+									onChange={(e) => handleSettingChange('maxFreq', parseFloat(e.target.value))}
 									className={getInputClass(settingsForm.maxFreq, status?.settings.maxFreq)}
 									step={6.25}
 									disabled={dataUnavailable}
 								/>
 							</div>
-							<div className="md:col-span-1 flex items-end justify-end">
-								<button type="submit" disabled={dataUnavailable} className="px-4 py-1 bg-indigo-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
-									Save Defaults
-								</button>
-							</div>
 						</form>
-						<div className="mt-4">
+						<div className="mt-4 flex gap-2">
+							<button
+								onClick={handleToggleSweep}
+								disabled={dataUnavailable}
+								className="flex-1 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
+							</button>
 							<button
 								onClick={async () => {
 									const analysis = await getHashrangeAnalysis();
@@ -989,7 +953,7 @@ export default function Dashboard() {
 									);
 									await showAnalysis('Hashrange Analysis Results', content);
 								}}
-								className="px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex-1 px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
 								disabled={dataUnavailable}
 							>
 								Analyse Hashrange
