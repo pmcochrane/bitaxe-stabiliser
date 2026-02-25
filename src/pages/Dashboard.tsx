@@ -1076,11 +1076,11 @@ export default function Dashboard() {
 									<Legend onClick={handleLegendClick} />
 									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
 									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
-									<ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />
+									{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />}
 									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
-									<ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />
+									{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
 									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
-									<ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />
+									{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
 									
 								</ComposedChart>
 							</ResponsiveContainer>
