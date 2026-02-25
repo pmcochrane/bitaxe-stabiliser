@@ -1005,31 +1005,29 @@ export default function Dashboard() {
 							 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
 						</h2>
 							<div className="flex items-center gap-4">
-								<div className="flex gap-2 text-sm dark:text-white">
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 0.25} onChange={() => setGraphHours(0.25)} /> 15m
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 0.5} onChange={() => setGraphHours(0.5)} /> 30m
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 1} onChange={() => setGraphHours(1)} /> 1h
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 2} onChange={() => setGraphHours(2)} /> 2h
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 4} onChange={() => setGraphHours(4)} /> 4h
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 8} onChange={() => setGraphHours(8)} /> 8h
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 24} onChange={() => setGraphHours(24)} /> 1d
-									</label>
-									<label className="flex items-center gap-1">
-										<input type="radio" name="graphHours" checked={graphHours === 48} onChange={() => setGraphHours(48)} /> 2d
-									</label>
+								<div className="flex gap-1 text-sm">
+									{[
+										{ value: 0.25, label: '15m' },
+										{ value: 0.5, label: '30m' },
+										{ value: 1, label: '1h' },
+										{ value: 2, label: '2h' },
+										{ value: 4, label: '4h' },
+										{ value: 8, label: '8h' },
+										{ value: 24, label: '1d' },
+										{ value: 48, label: '2d' },
+									].map((option) => (
+										<button
+											key={option.value}
+											onClick={() => setGraphHours(option.value)}
+											className={`px-3 py-1 rounded transition-colors ${
+												graphHours === option.value
+													? 'bg-green-500 text-black'
+													: 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+											}`}
+										>
+											{option.label}
+										</button>
+									))}
 								</div>
 								<button
 									onClick={fetchGraphData}
@@ -1040,8 +1038,9 @@ export default function Dashboard() {
 								</button>
 							</div>
 						</div>
-						<div className={`h-[640px] transition-opacity duration-300 ${graphRefreshing ? 'opacity-0' : 'opacity-100'}`}>
-							<ResponsiveContainer width="100%" height="100%">
+						<div className="h-[640px]">
+							<div className={`w-full h-full transition-opacity duration-300 ${graphRefreshing ? 'opacity-0' : 'opacity-100'}`}>
+								<ResponsiveContainer width="100%" height="100%">
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
 									<XAxis
@@ -1095,6 +1094,7 @@ export default function Dashboard() {
 									
 								</ComposedChart>
 							</ResponsiveContainer>
+							</div>
 						</div>
 					</div>
 				)}
