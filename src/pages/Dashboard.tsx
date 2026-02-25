@@ -452,14 +452,14 @@ export default function Dashboard() {
 	}, [graphData]);
 
 	const getStepTicks = useMemo((): number[] => {
-		if (graphData.length === 0) return [0, 1, 2, 3, 4, 5];
+		if (graphData.length === 0) return [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 		let min = Infinity;
 		let max = -Infinity;
 		for (const d of graphData) {
 			if (d.stepDown < min) min = d.stepDown;
 			if (d.stepDown > max) max = d.stepDown;
 		}
-		min = Math.min(min, 0);
+		min = Math.min(min, -5);
 		max = Math.max(max, 5);
 		const ticks: number[] = [];
 		for (let i = Math.ceil(min); i <= Math.floor(max); i++) {
@@ -1070,7 +1070,7 @@ export default function Dashboard() {
 									<YAxis
 										yAxisId="step"
 										orientation="right"
-										domain={[(dataMin: number) => Math.min(dataMin, 0), (dataMax: number) => Math.max(dataMax, 4)]}
+										domain={[(dataMin: number) => Math.min(dataMin, -5), (dataMax: number) => Math.max(dataMax, 4)]}
 										ticks={getStepTicks}
 										stroke="#22c55e"
 										tick={{ fontSize: 12 }}
