@@ -305,12 +305,12 @@ export default function Dashboard() {
 
 	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
-		let max = 0;
-		for (const d of graphData) {
-			if (d.hashRate > max) max = d.hashRate;
-		}
-		const padding = max * 0.1;
-		return [0, max + padding];
+		const sorted = graphData.map(d => d.hashRate).sort((a, b) => a - b);
+		const median = sorted[Math.floor(sorted.length / 2)];
+		const minAllowed = Math.max(0, sorted[0] * 0.9);
+		const maxAllowed = median * 1.05;
+		const padding = (maxAllowed - minAllowed) * 0.1;
+		return [minAllowed - padding, maxAllowed + padding];
 	}, [graphData]);
 
 	const getAverageHashrate = useMemo((): number => {
@@ -320,6 +320,13 @@ export default function Dashboard() {
 			sum += d.hashRate;
 		}
 		return sum / graphData.length;
+	}, [graphData]);
+
+	const getMedianHashrate = useMemo((): number => {
+		if (graphData.length === 0) return 0;
+		const sorted = graphData.map(d => d.hashRate).sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 	}, [graphData]);
 
 	const getTempDomain = useMemo((): [number, number] => {
@@ -971,7 +978,7 @@ export default function Dashboard() {
 									/>
 									<YAxis
 										yAxisId="hashrate"
-										domain={getHashrateDomain}
+										domain={[(dataMin: number) => getHashrateDomain[0], () => getHashrateDomain[1]]}
 										stroke="#8884d8"
 										tick={{ fontSize: 12 }}
 										tickFormatter={(value) => value.toFixed(3)}
@@ -1005,7 +1012,7 @@ export default function Dashboard() {
 									/>
 									<Legend />
 									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} />
-									<ReferenceLine yAxisId="hashrate" y={getAverageHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Average Hash Rate:'+getAverageHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />
+									<ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />
 									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} />
 									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
 									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
