@@ -52,7 +52,7 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-4">
+			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-2">
 				<div className="container mx-auto flex justify-between items-center">
 					<div className="flex items-center gap-2">
 						<img

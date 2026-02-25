@@ -524,7 +524,7 @@ export default function Dashboard() {
 
 	if (loading) {
 		return (
-			<div className="container mx-auto p-4">
+			<div className="container mx-auto p-2">
 				<div className="animate-pulse dark:text-white">Loading...</div>
 			</div>
 		);
@@ -567,8 +567,8 @@ export default function Dashboard() {
 					</div>
 				</div>
 			</AnimatedBanner>
-			<div className="container mx-auto p-4">
-				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+			<div className="container mx-auto p-2">
+				<div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
 					{/* Current Bitaxe Status */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
@@ -624,7 +624,7 @@ export default function Dashboard() {
 							</div>
 						</AnimatedBanner>
 						{current && !dataUnavailable ? (
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+							<div className="grid grid-cols-2 md:grid-cols-4 gap-2">
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
 									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} TH/s</div>
@@ -778,7 +778,7 @@ export default function Dashboard() {
 					{/* Manual Control and Settings Form */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
-						<div className="flex flex-wrap gap-4 mb-4 items-center">
+						<div className="flex flex-wrap gap-2 mb-2 items-center">
 							<div className="flex gap-2">
 								<button
 									onClick={() => handleAdjustFreq(1)}
@@ -976,7 +976,7 @@ export default function Dashboard() {
 
 				{/* Graph panel */}
 				{graphData.length > 0 && (
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
 						<div className="flex justify-between items-center mb-4">
 							<h2 className="text-lg font-semibold dark:text-white">
 								{graphHours === 0.25 ? 'Last 15 Minutes' : 
@@ -1057,7 +1057,7 @@ export default function Dashboard() {
 										ticks={getStepTicks}
 										stroke="#22c55e"
 										tick={{ fontSize: 12 }}
-										label={{ value: 'Step', angle: 90, position: 'right', offset: -30, fill: '#22c55e' }}
+										label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#22c55e' }}
 									/>
 									<Tooltip
 										contentStyle={{
@@ -1083,7 +1083,7 @@ export default function Dashboard() {
 				)}
 
 				{/* Historical Data Table */}
-				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-2">
 					<h2 className="text-lg font-semibold mb-4 dark:text-white">{status?.history && status.history.length ? 'Last '+status.history.length+' Readings' : "No Historical data"}</h2>
 					<div className="overflow-x-auto">
 						<table className="w-full text-sm">
