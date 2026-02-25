@@ -74,6 +74,8 @@ function App() {
 						</h1>
 					</div>
 					<div className="flex-1 text-center">
+						BTC Donation Address:
+						<br />
 						<button
 							onClick={() => {
 								navigator.clipboard.writeText('bc1qna9cfhz6vuafp9vjkr5uvch7l82xgucdeejxtw');
@@ -82,7 +84,7 @@ function App() {
 							title="All donations greatfully accepted. Thank you, Paul"
 							className="text-sm text-gray-400 hover:text-blue-300 underline"
 						>
-							BTC Donation Address: <span className="font-mono">bc1qna9cfhz6vuafp9vjkr5uvch7l82xgucdeejxtw</span>
+							<span className="font-mono">bc1qna9cfhz6vuafp9vjkr5uvch7l82xgucdeejxtw</span>
 						</button>
 					</div>
 					<div className="flex items-center gap-4">

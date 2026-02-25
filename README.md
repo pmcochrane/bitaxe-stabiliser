@@ -188,3 +188,9 @@ After a sweep is complete, use "Analyse Hashrange" to view the findings for your
 - Best efficiency
 
 The table will indicate the top 5 results for each field for a particular core voltage and frequency. Choose whatever values you like to meet your personal needs from your bitaxe mining.
+
+## Donations
+
+This software is provided by myself to the open source community and is something that I have built for my own use in my own free time. My aim for this software was to run my bitaxes hot to provide ambient supplementary heating for my office on colder days. Higher hash rate are also good in my opinion :)
+
+If you find yourself using this software, like it and feel like give something back then I have left a bitcoin address in the UI that you are welcome to send any donations as thanks. Anything will be much appreciated and unexpected. I hope you like this application. If you don't then that is also fine but don't moan to me about it!

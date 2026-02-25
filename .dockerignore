@@ -7,4 +7,3 @@ public
 .env
 .env.*
 !.env.example
-README.md

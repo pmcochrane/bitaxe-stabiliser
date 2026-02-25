@@ -4,7 +4,6 @@
   "description": "Web-based Bitaxe monitoring and control application. Choose a temperature and app will attempt to keep your bitaxe at that temperature by adjusting the asic frequency",
   "main": "dist/index.js",
   "scripts": {
-    "prebuild": "node scripts/update-about.js",
     "predev": "npm run build",
     "build": "tsc && npm run build:react",
     "build:react": "vite build",
