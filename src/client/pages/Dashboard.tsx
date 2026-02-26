@@ -9,7 +9,7 @@ import { logUi } from '../utils/logger';
 import { Trash2, Play, Square, BarChart3, RefreshCw } from 'lucide-react';
 
 interface GraphDataEntry {
-	t: string;
+	t: number;
 	h: number;
 	a: number;
 	v: number;
@@ -108,7 +108,7 @@ export default function Dashboard() {
 		if (data.length === 0) return [];
 		const cutoffTime = new Date();
 		cutoffTime.setHours(cutoffTime.getHours() - MAX_GRAPH_AGE_HOURS);
-		return data.filter(entry => new Date(entry.t) > cutoffTime);
+		return data.filter(entry => entry.t * 1000 > cutoffTime.getTime());
 	}, []);
 
 	const loadCachedGraphData = useCallback((): GraphDataEntry[] => {
@@ -117,18 +117,27 @@ export default function Dashboard() {
 			if (cached) {
 				const parsed = JSON.parse(cached);
 				let allData: GraphDataEntry[] = parsed;
-				if (parsed.length > 0 && 'timestamp' in parsed[0]) {
-					allData = parsed.map((entry: any) => ({
-						t: entry.timestamp,
-						h: entry.hashRate,
-						a: entry.temp,
-						v: entry.vrTemp,
-						s: entry.stepDown,
-					}));
-					localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
+				if (parsed.length > 0) {
+					const first = parsed[0];
+					if ('timestamp' in first) {
+						allData = parsed.map((entry: any) => ({
+							t: Math.floor(new Date(entry.timestamp).getTime() / 1000),
+							h: entry.hashRate,
+							a: entry.temp,
+							v: entry.vrTemp,
+							s: entry.stepDown,
+						}));
+						localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
+					} else if (typeof first.t === 'number' && first.t > 1e12) {
+						allData = parsed.map((entry: any) => ({
+							...entry,
+							t: Math.floor(entry.t / 1000),
+						}));
+						localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
+					}
 				}
 				allData.forEach(entry => delete (entry as any).stepDownFilled);
-				return allData.sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime());
+				return allData.sort((a, b) => a.t - b.t);
 			}
 		} catch (error) {
 			console.error('Failed to load cached graph data:', error);
@@ -265,15 +274,15 @@ export default function Dashboard() {
 				const cachedData = loadCachedGraphData();
 			const latestTimestamp = (forceRefresh || isNewTimeRange) || cachedData.length === 0
 				? undefined
-				: cachedData.reduce((latest: string, entry: GraphDataEntry) => 
-					new Date(entry.t) > new Date(latest) ? entry.t : latest, cachedData[0].t);
+				: cachedData.reduce((latest: number, entry: GraphDataEntry) => 
+					entry.t > latest ? entry.t : latest, cachedData[0].t);
 
-			const data = await getHistoryGraph(graphHours, latestTimestamp);
+			const data = await getHistoryGraph(graphHours, latestTimestamp ? new Date(latestTimestamp * 1000).toISOString() : undefined);
 				
 				if (data.length === 0) {
 					logUi(logPrefix, 'No new data - using cache');
 					if (cachedData.length > 0) {
-						const filteredForDisplay = cachedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
+						const filteredForDisplay = cachedData.filter(e => e.t * 1000 > cutoffTime.getTime());
 						const displayData = downsampleData(filteredForDisplay, targetPoints);
 						setGraphData(displayData);
 					}
@@ -282,7 +291,7 @@ export default function Dashboard() {
 				}
 
 				const transformed: GraphDataEntry[] = data.map(d => ({
-					t: d.timestamp,
+					t: Math.floor(new Date(d.timestamp).getTime() / 1000),
 					h: Math.round((d.hashRate / 1000) * 1000) / 1000,
 					a: d.temp,
 					v: d.vrTemp,
@@ -296,13 +305,13 @@ export default function Dashboard() {
 					const existingTimestamps = new Set(cachedData.map((d: GraphDataEntry) => d.t));
 					const newEntries = transformed.filter((d: GraphDataEntry) => !existingTimestamps.has(d.t));
 					mergedData = [...cachedData, ...newEntries].sort((a, b) => 
-						new Date(a.t).getTime() - new Date(b.t).getTime()
+						a.t - b.t
 					);
 				}
 
 				const downsampledData = downsampleData(mergedData, targetPoints);
 				saveGraphDataToCache(mergedData);
-				const filteredForDisplay = mergedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
+				const filteredForDisplay = mergedData.filter(e => e.t * 1000 > cutoffTime.getTime());
 				const displayData = downsampleData(filteredForDisplay, targetPoints);
 				setGraphData(displayData);
 				setGraphRefreshing(false);
@@ -376,7 +385,7 @@ export default function Dashboard() {
 		}
 		const targetPoints = Math.max(50, Math.min(900, Math.round(basePoints)));
 		if (cachedData.length > 0) {
-			const filteredForDisplay = cachedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
+			const filteredForDisplay = cachedData.filter(e => e.t * 1000 > cutoffTime.getTime());
 			const displayData = downsampleData(filteredForDisplay, targetPoints);
 			setGraphData(displayData);
 		}
@@ -1005,112 +1014,112 @@ export default function Dashboard() {
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
 					<div className="flex justify-between items-center mb-4">
 						<h2 className="text-lg font-semibold dark:text-white">
-							{graphHours === 0.25 ? 'Last 15 Minutes' : 
-						 graphHours === 0.5 ? 'Last 30 Minutes' : 
-						 graphHours === 1 ? 'Last 1 Hour' : 
-						 graphHours === 2 ? 'Last 2 Hours' : 
-						 graphHours === 4 ? 'Last 4 Hours' : 
-						 graphHours === 8 ? 'Last 8 Hours' : 
-						 graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
+							{	graphHours === 0.25 ? 'Last 15 Minutes' : 
+								graphHours === 0.5 ? 'Last 30 Minutes' : 
+								graphHours === 1 ? 'Last 1 Hour' : 
+								graphHours === 2 ? 'Last 2 Hours' : 
+								graphHours === 4 ? 'Last 4 Hours' : 
+								graphHours === 8 ? 'Last 8 Hours' : 
+								graphHours === 24 ? 'Last 1 Day' : 'Last 2 Days'}
 						</h2>
-							<div className="flex items-center gap-4">
-								<div className="flex text-sm">
-									{[
-										{ value: 0.25, label: '15m' },
-										{ value: 0.5, label: '30m' },
-										{ value: 1, label: '1h' },
-										{ value: 2, label: '2h' },
-										{ value: 4, label: '4h' },
-										{ value: 8, label: '8h' },
-										{ value: 24, label: '1d' },
-										{ value: 48, label: '2d' },
-									].map((option, index, arr) => (
-										<button
-											key={option.value}
-											onClick={() => setGraphHours(option.value)}
-											className={`px-3 py-1 transition-colors ${
-												index === 0 ? 'rounded-l' : index === arr.length - 1 ? 'rounded-r' : 'rounded-none'
-											} ${
-												graphHours === option.value
-													? 'bg-green-500 text-black'
-													: 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-											}`}
-										>
-											{option.label}
-										</button>
-									))}
-								</div>
-								<button
-									onClick={() => fetchGraphData(true)}
-									className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-								>
-									<RefreshCw className="w-4 h-4" />
-									Refresh
-								</button>
+						<div className="flex items-center gap-4">
+							<div className="flex text-sm">
+								{[
+									{ value: 0.25, label: '15m' },
+									{ value: 0.5, label: '30m' },
+									{ value: 1, label: '1h' },
+									{ value: 2, label: '2h' },
+									{ value: 4, label: '4h' },
+									{ value: 8, label: '8h' },
+									{ value: 24, label: '1d' },
+									{ value: 48, label: '2d' },
+								].map((option, index, arr) => (
+									<button
+										key={option.value}
+										onClick={() => setGraphHours(option.value)}
+										className={`px-3 py-1 transition-colors ${
+											index === 0 ? 'rounded-l' : index === arr.length - 1 ? 'rounded-r' : 'rounded-none'
+										} ${
+											graphHours === option.value
+												? 'bg-green-500 text-black'
+												: 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+										}`}
+									>
+										{option.label}
+									</button>
+								))}
 							</div>
-						</div>
-						<div className="h-[640px] relative">
-							<div className={`absolute inset-0 transition-opacity duration-300 ${graphData.length > 0 && !graphRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-								<ResponsiveContainer width="100%" height="100%">
-								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
-									<XAxis
-										dataKey="t"
-										tickFormatter={(value: any) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-										stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
-										tick={{ fontSize: 12 }}
-									/>
-									<YAxis
-										yAxisId="hashrate"
-										domain={[(dataMin: number) => getHashrateDomain[0], () => getHashrateDomain[1]]}
-										stroke="#8884d8"
-										tick={{ fontSize: 12 }}
-										tickFormatter={(value) => value.toFixed(3)}
-										label={{ value: 'TH/s', angle: -90, position: 'left', offset: 0, fill: '#8884d8' }}
-									/>
-									<YAxis
-										yAxisId="temp"
-										orientation="right"
-										domain={getTempDomain}
-										stroke="#ef4444"
-										tick={{ fontSize: 12, fill: '#ef4444' }}
-										tickFormatter={(value) => Math.round(value).toString()}
-										label={{ value: '°C', angle: 0, position: 'right', offset: -35, fill: '#ef4444' }}
-									/>
-									<YAxis
-										yAxisId="step"
-										orientation="right"
-										domain={[(dataMin: number) => Math.min(dataMin, -5), (dataMax: number) => Math.max(dataMax, 4)]}
-										ticks={getStepTicks}
-										stroke="#22c55e"
-										tick={{ fontSize: 12 }}
-										label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#22c55e' }}
-									/>
-									<Tooltip
-										contentStyle={{
-											backgroundColor: isDarkMode ? '#1f2937' : '#fff',
-											border: isDarkMode ? '#4b5563' : '#e5e7eb',
-											color: isDarkMode ? '#fff' : '#000',
-										}}
-										labelFormatter={(value: any) => new Date(value).toLocaleString()}
-									/>
-									<Legend onClick={handleLegendClick} />
-									<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
-									<Area yAxisId="step" type="monotone" dataKey="s" name="Step" stroke="#22c55e" fill="#22c55e80" strokeWidth={1.5} dot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
-									{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />}
-									<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
-									{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
-									<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
-									{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
-									
-								</ComposedChart>
-							</ResponsiveContainer>
-							</div>
-							<div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${graphData.length === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-								<p className="text-gray-500 dark:text-gray-400">No data to graph</p>
-							</div>
+							<button
+								onClick={() => fetchGraphData(true)}
+								className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+							>
+								<RefreshCw className="w-4 h-4" />
+								Refresh
+							</button>
 						</div>
 					</div>
+					<div className="h-[640px] relative">
+						<div className={`absolute inset-0 transition-opacity duration-300 ${graphData.length > 0 && !graphRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+							<ResponsiveContainer width="100%" height="100%">
+							<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+								<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
+								<XAxis
+									dataKey="t"
+									tickFormatter={(value: any) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+									stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
+									tick={{ fontSize: 12 }}
+								/>
+								<YAxis
+									yAxisId="hashrate"
+									domain={[(dataMin: number) => getHashrateDomain[0], () => getHashrateDomain[1]]}
+									stroke="#8884d8"
+									tick={{ fontSize: 12 }}
+									tickFormatter={(value) => value.toFixed(3)}
+									label={{ value: 'TH/s', angle: -90, position: 'left', offset: 0, fill: '#8884d8' }}
+								/>
+								<YAxis
+									yAxisId="temp"
+									orientation="right"
+									domain={getTempDomain}
+									stroke="#ef4444"
+									tick={{ fontSize: 12, fill: '#ef4444' }}
+									tickFormatter={(value) => Math.round(value).toString()}
+									label={{ value: '°C', angle: 0, position: 'right', offset: -35, fill: '#ef4444' }}
+								/>
+								<YAxis
+									yAxisId="step"
+									orientation="right"
+									domain={[(dataMin: number) => Math.min(dataMin, -5), (dataMax: number) => Math.max(dataMax, 4)]}
+									ticks={getStepTicks}
+									stroke="#22c55e"
+									tick={{ fontSize: 12 }}
+									label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#22c55e' }}
+								/>
+								<Tooltip
+									contentStyle={{
+										backgroundColor: isDarkMode ? '#1f2937' : '#fff',
+										border: isDarkMode ? '#4b5563' : '#e5e7eb',
+										color: isDarkMode ? '#fff' : '#000',
+									}}
+									labelFormatter={(value: any) => new Date(value).toLocaleString()}
+								/>
+								<Legend onClick={handleLegendClick} />
+								<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
+								<Area yAxisId="step" type="monotone" dataKey="s" name="Step" stroke="#22c55e" fill="#22c55e80" strokeWidth={1.5} dot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
+								{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />}
+								<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
+								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
+								<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
+								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
+								
+							</ComposedChart>
+						</ResponsiveContainer>
+						</div>
+						<div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${graphData.length === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+							<p className="text-gray-500 dark:text-gray-400">No data to graph</p>
+						</div>
+					</div>
+				</div>
 
 				{/* Historical Data Table */}
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-2">
