@@ -14,7 +14,6 @@ interface GraphDataEntry {
 	temp: number;
 	vrTemp: number;
 	stepDown: number;
-	stepDownFilled: number;
 }
 
 export default function Dashboard() {
@@ -117,6 +116,7 @@ export default function Dashboard() {
 			const cached = localStorage.getItem(GRAPH_STORAGE_KEY);
 			if (cached) {
 				const allData: GraphDataEntry[] = JSON.parse(cached);
+				allData.forEach(entry => delete (entry as any).stepDownFilled);
 				return allData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 			}
 		} catch (error) {
@@ -276,7 +276,6 @@ export default function Dashboard() {
 					temp: d.temp,
 					vrTemp: d.vrTemp,
 					stepDown: d.stepDown,
-					stepDownFilled: d.stepDown,
 				}));
 
 				let mergedData: GraphDataEntry[];
