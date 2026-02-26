@@ -4,6 +4,7 @@
 
 - Dashboard: Step graph is now a filled line chart instead of a bar chart.
 - Dashboard: Remove repetitive duplicates from graph plots where the VR Temp, ASIC temp and step is the same for sucessive timestamps. First timestamp will be preserved in the data. Hash rate is not compared
+- Dashboard: An alert will show if the bitaxe hashrate falls off and drops to 25% below the median hash rate value.
 
 ## Bug Fixes
 

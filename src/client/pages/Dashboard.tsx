@@ -93,12 +93,12 @@ export default function Dashboard() {
 				settingsChangedRef.current = false;
 				try {
 					await updateSettings(settingsFormRef.current);
-					fetchStatus();
+					setImmediate(fetchStatus);
 				} catch (error) {
 					console.error('Failed to save settings:', error);
 				}
 			}
-		}, 1000);
+		}, 300);
 	};
 
 	useEffect(() => {
@@ -523,7 +523,7 @@ export default function Dashboard() {
 
 	const handleAdjustFreq = async (delta: number) => {
 		sendControl({ action: 'adjustFreq', value: delta });
-		setTimeout(fetchStatus, 100);
+		setImmediate(fetchStatus);
 	};
 
 	const handleToggleSweep = async () => {
