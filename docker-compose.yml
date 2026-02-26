@@ -1,8 +1,8 @@
 # Common base configuration (build + shared settings)
 x-base: &base               # ← note the x- prefix
   image: pmcochrane/bitaxe-stabiliser:${TAG:-latest}
-  build:
-    context: .
+  #build:
+  #  context: .
   volumes:
     - ./deviceData:/app/deviceData
   # environment: 
@@ -18,12 +18,12 @@ x-base: &base               # ← note the x- prefix
 
 services:
   # Config for bitaxe device 1
-  # bitaxe-stabiliser-g1:
-  #   <<: *base
-  #   environment:
-  #     - BITAXE_IP=${BITAXE_IP_1}
-  #   ports:
-  #     - "${PORT_1:-3001}:3000"
+  bitaxe-stabiliser-g1:
+    <<: *base
+    environment:
+      - BITAXE_IP=${BITAXE_IP_1}
+    ports:
+      - "${PORT_1:-3001}:3000"
 
   # Config for bitaxe device 2
   bitaxe-stabiliser-g2:

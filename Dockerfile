@@ -50,5 +50,5 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Use tini + non-root user
-ENTRYPOINT ["/sbin/tini", "--", "su-exec", "nodejs"]
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/server/index.js"]
