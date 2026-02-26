@@ -66,7 +66,7 @@ You will need to create a 'docker-compose.yaml' file for either method above. Be
 ```yaml
 # Common base configuration (build + shared settings)
 x-base: &base               # ← note the x- prefix
-  image: peaemcee/bitaxe-stabiliser:${TAG:-latest}
+  image: pmcochrane/bitaxe-stabiliser:${TAG:-latest}
   # Uncomment the lines below if you are building your own image
   # image: bitaxe-stabiliser:${TAG:-latest}
   # build:

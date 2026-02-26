@@ -13,9 +13,11 @@
     "dev": "concurrently \"NODE_ENV=development ts-node src/server/index.ts\" \"vite --port 5173\"",
     "dev:all": "ts-node src/server/index.ts",
     "release": "echo 'Usage: npm run release -- minor|major|patch' && exit 1",
-    "release:minor": "npm version minor && git push --follow-tags && gh release create --generate-notes",
-    "release:patch": "npm version patch && git push --follow-tags && gh release create --generate-notes",
-    "release:major": "npm version major && git push --follow-tags && gh release create --generate-notes"
+    "release:minor": "npm version minor && npm run docker:build && npm run docker:push && git push --follow-tags && gh release create --generate-notes",
+    "release:patch": "npm version patch && npm run docker:build && npm run docker:push && git push --follow-tags && gh release create --generate-notes",
+    "release:major": "npm version major && npm run docker:build && npm run docker:push && git push --follow-tags && gh release create --generate-notes",
+    "docker:build": "docker build -t pmcochrane/bitaxe-stabiliser:$(node -p \"require('./package.json').version\") -t pmcochrane/bitaxe-stabiliser:latest .",
+    "docker:push": "docker push pmcochrane/bitaxe-stabiliser:$(node -p \"require('./package.json').version\") && docker push pmcochrane/bitaxe-stabiliser:latest"
   },
   "dependencies": {
     "axios": "^1.6.0",
