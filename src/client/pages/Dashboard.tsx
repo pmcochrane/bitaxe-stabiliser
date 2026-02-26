@@ -28,12 +28,20 @@ export default function Dashboard() {
 		vrTemp: true,
 		stepDown: true,
 	});
+	const dataKeyToLegendKey: Record<string, keyof typeof legendVisibility> = {
+		h: 'hashRate',
+		s: 'stepDown',
+		a: 'temp',
+		v: 'vrTemp',
+	};
 	const handleLegendClick = (e: any) => {
-		const dataKey = e.dataKey as keyof typeof legendVisibility;
+		const dataKey = e.dataKey;
 		if (!dataKey) return;
+		const legendKey = dataKeyToLegendKey[dataKey];
+		if (!legendKey) return;
 		setLegendVisibility((prev) => ({
 			...prev,
-			[dataKey]: !prev[dataKey],
+			[legendKey]: !prev[legendKey],
 		}));
 	};
 	const [settingsForm, setSettingsForm] = useState<Settings>({

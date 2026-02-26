@@ -8,7 +8,7 @@
 - Write some notification method to alert remotely
 - Method for switching dashboard & history to view other stabilised bitaxes in the same deviceData folder. Stabiliser On and Manual Control would need to be unavailable in this mode
 
-## bugs
+## Bugs
 
 - Changing values for frequency or core voltage "confuse" the step. The step value will need verified it is correct after changing it.
 - If bitaxe hashrate falls off due to too high a freq for core voltage then stepping goes crazy and drifts to max. Maybe add a warning banner if hash rate plummets & stays below median-10%
