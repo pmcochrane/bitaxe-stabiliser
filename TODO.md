@@ -1,4 +1,4 @@
-## Changes
+# Changes
 
 - Convert the step plot to a line graph removing duplicates and showing points
 - Remove duplicates from lines for VR Temp and ASIC temp. Less effect on ASIC Temp

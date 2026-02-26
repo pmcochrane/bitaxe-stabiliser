@@ -148,7 +148,23 @@ export default function Dashboard() {
 	const saveGraphDataToCache = useCallback((data: GraphDataEntry[]) => {
 		try {
 			const cropped = cropOldEntries(data);
-			localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(cropped));
+			const sorted = [...cropped].sort((a, b) => a.t - b.t);
+			const deduped: GraphDataEntry[] = [];
+			let prevKey: string | null = null;
+			let dropped = 0;
+			for (const entry of sorted) {
+				const key = `${entry.a}_${entry.v}_${entry.s}`;
+				if (key !== prevKey) {
+					deduped.push(entry);
+					prevKey = key;
+				} else {
+					dropped++;
+				}
+			}
+			if (dropped > 0) {
+				console.log(`Graph data: orig: ${sorted.length} -> ${dropped} consecutive duplicates dropped -> ${deduped.length} stored`);
+			}
+			localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(deduped));
 		} catch (error) {
 			console.error('Failed to save graph data to cache:', error);
 		}
@@ -1065,7 +1081,7 @@ export default function Dashboard() {
 								<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
 								<XAxis
 									dataKey="t"
-									tickFormatter={(value: any) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+									tickFormatter={(value: any) => new Date(value * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 									stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
 									tick={{ fontSize: 12 }}
 								/>
@@ -1101,7 +1117,7 @@ export default function Dashboard() {
 										border: isDarkMode ? '#4b5563' : '#e5e7eb',
 										color: isDarkMode ? '#fff' : '#000',
 									}}
-									labelFormatter={(value: any) => new Date(value).toLocaleString()}
+									labelFormatter={(value: any) => new Date(value * 1000).toLocaleString()}
 								/>
 								<Legend onClick={handleLegendClick} />
 								<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
