@@ -707,12 +707,14 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Step</div>
-									<div className="text-xl font-bold dark:text-white">{current.stepDown}</div>
-									{status?.isStepStable && (
-										<span className="ml-2 px-2 py-1 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
-											Stable
-										</span>
-									)}
+									<div className="flex items-center gap-2">
+										<span className="text-xl font-bold dark:text-white">{current.stepDown}</span>
+										{status?.isStepStable && (
+											<span className="px-2 py-0.5 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
+												Stable
+											</span>
+										)}
+									</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Reduced by ${Math.abs(current.stepDown * 6.25).toFixed(2)} MHz`}>Frequency</div>
