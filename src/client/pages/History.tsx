@@ -6,6 +6,8 @@ import { getTempColor, getToExpectedColor } from '../utils/colors';
 
 export default function History() {
 	const [data, setData] = useState<HistoryEntry[]>([]);
+	const [cachedData, setCachedData] = useState<HistoryEntry[]>([]);
+	const [cachedAt, setCachedAt] = useState<string | null>(null);
 	const [page, setPage] = useState(1);
 	const [rowsPerPage, setRowsPerPage] = useState(50);
 	const [sort, setSort] = useState<'asc' | 'desc'>('desc');
@@ -56,6 +58,8 @@ export default function History() {
 		try {
 			const result: HistoryResponse = await getHistory(page, rowsPerPage, sort);
 			setData(result.data);
+			setCachedData(result.data);
+			setCachedAt(new Date().toISOString());
 			setTotalPages(result.totalPages);
 			setTotal(result.total);
 		} catch (error) {
@@ -63,6 +67,10 @@ export default function History() {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	const refreshData = async () => {
+		await fetchHistory();
 	};
 
 	useEffect(() => {
@@ -115,7 +123,7 @@ export default function History() {
 
 	useEffect(() => {
 		fetchHistory();
-	}, [page, rowsPerPage, sort]);
+	}, [page, sort]);
 
 	const handleExportCsv = async () => {
 		if (data.length === 0) {
@@ -218,12 +226,25 @@ export default function History() {
 						Page {page} of {totalPages} ({total} entries)
 						<br />
 						Rows per page: {rowsPerPage}
+						{cachedAt && (
+							<>
+								<br />
+								<span className="text-xs">Cached: {new Date(cachedAt).toLocaleTimeString()}</span>
+							</>
+						)}
 					</div>
 					<button
 						onClick={handleExportCsv}
 						className="px-4 py-2 bg-green-500 text-white rounded hover:opacity-90"
 					>
 						Export CSV
+					</button>
+					<button
+						onClick={refreshData}
+						disabled={loading}
+						className="px-4 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50"
+					>
+						Refresh
 					</button>
 				</div>
 			</div>
@@ -255,20 +276,23 @@ export default function History() {
 									<td colSpan={12} className="p-4 text-center dark:text-white">No data</td>
 								</tr>
 							) : (
-								data.map((h, i) => (
+								data.map((h, i) => {
+									const prev = i < data.length - 1 ? data[i + 1] : null;
+									return (
 									<tr key={i} className="border-b hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-600">
 										<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
 										<td className="p-2 text-right dark:text-white">{(h.hashRate / 1000).toFixed(3)}</td>
 										<td className={`p-2 text-right ${getToExpectedColor(h.toExpected)}`}>{h.toExpected.toFixed(1)}%</td>
 										<td className={`p-2 text-right ${getTempColor(h.temp, settings.targetAsic)}`}>{h.temp.toFixed(3)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.vrTemp, settings.maxVr)}`}>{h.vrTemp}</td>
-										<td className="p-2 text-right dark:text-white">{h.coreVoltage.toFixed(1)}</td>
-										<td className="p-2 text-right dark:text-white">{h.frequency}</td>
-										<td className="p-2 text-right dark:text-white">{h.stepDown}</td>
+										<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage.toFixed(1)}</td>
+										<td className={`p-2 text-right ${prev && prev.frequency !== h.frequency ? 'bg-purple-100 dark:bg-purple-800 font-bold' : 'dark:text-white'}`}>{h.frequency}</td>
+										<td className={`p-2 text-right ${prev && prev.oldStepDown !== h.oldStepDown ? 'bg-yellow-100 dark:bg-yellow-800 font-bold' : 'dark:text-white'}`}>{h.oldStepDown}</td>
 										<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
 										<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(2)}</td>
 									</tr>
-								))
+									);
+								})
 							)}
 						</tbody>
 					</table>

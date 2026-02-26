@@ -20,6 +20,7 @@ export interface BitaxeSystemInfo {
 export interface BitaxeStatus extends BitaxeSystemInfo {
 	timestamp: string;
 	iteration: number;
+	oldStepDown: number;
 	stepDown: number;
 	desiredFreq: number;
 	coreVoltage2: number;
@@ -50,6 +51,7 @@ export interface Settings {
 export interface HistoryEntry {
 	timestamp: string;
 	iteration: number;
+	oldStepDown: number;
 	stepDown: number;
 	hostname: string;
 	hashRate: number;

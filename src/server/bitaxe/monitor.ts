@@ -216,12 +216,14 @@ export class MonitorService {
 				const status = this.processReading(info);
 				if (status) {
 					if (this.state.running) {
+						const oldStepDown = this.state.stepDown;
 						this.evaluateAndAdjust(status);
+						status.oldStepDown = oldStepDown;
+						status.stepDown = this.state.stepDown;
 					}
 					this.store.addHistoryEntry(status);
 				}
 			}
-
 			this.scheduleNext();
 		}).catch((err) => {
 			logMonitor(`[${this.iteration}] Failed to get system info: ${err}`);
@@ -303,6 +305,7 @@ export class MonitorService {
 			...info,
 			timestamp,
 			iteration: this.iteration,
+			oldStepDown: this.state.stepDown,
 			stepDown: this.state.stepDown,
 			desiredFreq: this.desiredFreq,
 			coreVoltage2: this.settings.coreVoltage,

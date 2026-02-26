@@ -14,6 +14,7 @@ export interface Settings {
 export interface HistoryEntry {
 	timestamp: string;
 	iteration: number;
+	oldStepDown: number;
 	stepDown: number;
 	hostname: string;
 	hashRate: number;

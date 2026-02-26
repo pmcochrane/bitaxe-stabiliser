@@ -1123,8 +1123,8 @@ export default function Dashboard() {
 							</thead>
 							<tbody>
 								{status?.history && status.history.length > 0 ? (
-									[...status.history].reverse().slice(0, 10).map((h, i) => {
-										const prev = i < 9 && status.history.length > i + 1 ? [...status.history].reverse()[i + 1] : null;
+									[...status.history].reverse().slice(0, 10).map((h, i, arr) => {
+										const prev = i < arr.length - 1 ? arr[i + 1] : null;
 										return (
 											<tr key={h.timestamp} className={`border-b dark:border-gray-700 ${i === 0 ? 'bg-yellow-50 dark:bg-gray-700 font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
 												<td className="p-2 dark:text-white">{new Date(h.timestamp).toLocaleString()}</td>
@@ -1134,7 +1134,7 @@ export default function Dashboard() {
 												<td className={`p-2 text-right ${getTempColor(h.vrTemp, settingsForm.maxVr)}`}>{h.vrTemp}</td>
 												<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage.toFixed(1)}</td>
 												<td className={`p-2 text-right ${prev && prev.frequency !== h.frequency ? 'bg-purple-100 dark:bg-purple-800 font-bold' : 'dark:text-white'}`}>{h.frequency}</td>
-												<td className={`p-2 text-right ${prev && prev.stepDown !== h.stepDown ? 'bg-yellow-100 dark:bg-yellow-800 font-bold' : 'dark:text-white'}`}>{h.stepDown}</td>
+												<td className={`p-2 text-right ${prev && prev.oldStepDown !== h.oldStepDown ? 'bg-yellow-100 dark:bg-yellow-800 font-bold' : 'dark:text-white'}`}>{h.oldStepDown}</td>
 												<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
 												<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(2)}</td>
 											</tr>
