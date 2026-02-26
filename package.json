@@ -1,6 +1,6 @@
 {
   "name": "bitaxe-stabiliser",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Web-based Bitaxe monitoring and control application. Choose a temperature and app will attempt to keep your bitaxe at that temperature by adjusting the asic frequency",
   "main": "dist/server/index.js",
   "scripts": {
