@@ -2,11 +2,13 @@
 
 ## Changes
 
-- Dashboard: Step graph is now a filled line chart instead of a bar chart.
-- Dashboard: Remove repetitive duplicates from graph plots where the VR Temp, ASIC temp and step is the same for sucessive timestamps. First timestamp will be preserved in the data. Hash rate is not compared
-- Dashboard: An alert will show if the bitaxe hashrate falls off and drops to 25% below the median hash rate value.
+- **Dashboard**: Step graph is now a filled line chart instead of a bar chart.
+- **Dashboard**: Added another line to graph corresponding to the max VR temp.
+- **Dashboard**: Remove repetitive duplicates from graph plots where the VR Temp, ASIC temp and step is the same for sucessive timestamps. First timestamp will be preserved in the data. Hash rate is not compared
+- **Dashboard**: An alert will show if the bitaxe hashrate falls off and drops to 25% below the median hash rate value.
+- **Monitor**: Make the temp control range configurable via an environment variable. This should be a low value floating point and defaults to 0.25. Larger values may prevent the temperatures from stabilising.
 
 ## Bug Fixes
 
-- BUG: localstorage limits are being hit for storing graphdata and cannot store 2 days worth of data.
+- **BUG**: localstorage limits are being hit for storing graphdata and cannot store 2 days worth of data.
 `_Fixed by renaming properties, changing how timestamps were stored & deduplicating data where there was consecutive values for ASIC temp, VR Temp and Step present._`

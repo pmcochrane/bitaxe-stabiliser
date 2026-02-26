@@ -61,16 +61,14 @@ You have 2 methods of running the application:
 
 ### Setting up the 'docker-compose.yml' file
 
-You will need to create a 'docker-compose.yaml' file for either method above. Below is for using the docker hub precompiled version. See the comments for if you want to build your own. There is a slightly different version in the repository that uses environment variable to pass in parameters if you are so inclined.
+You will need to create a 'docker-compose.yaml' file for either method above. Below is for using the docker hub precompiled version unless you build your own version locally. There is a slightly different version in the repository that uses environment variable to pass in parameters if you are so inclined.
 
 ```yaml
 # Common base configuration (build + shared settings)
 x-base: &base               # ← note the x- prefix
   image: pmcochrane/bitaxe-stabiliser:${TAG:-latest}
-  # Uncomment the lines below if you are building your own image
-  # image: bitaxe-stabiliser:${TAG:-latest}
-  # build:
-  #   context: .
+  build:
+    context: .
 volumes:
     - ./deviceData:/app/deviceData
   restart: unless-stopped
@@ -112,6 +110,7 @@ docker compose --build
 ```
 
 If you want to use the version provided on docker hub then you may need to pull to get the latest version downloaded.
+
 ```yaml
 # Pull the latest version to your PC
 docker compose pull
@@ -131,16 +130,16 @@ There are other environment variables that can be set in your `docker-compose.ym
 
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
-| BITAXE_IP | IP address of the Bitaxe (required) | |
+| BITAXE_IP | IP address of the Bitaxe (required) | No Default |
 | BITAXE_HOSTNAME | Hostname for deviceData folder | Falls back to IP if bitaxe API does not return a value |
 | TARGET_ASIC | Target ASIC temp (°C) | 65 |
-| MAX_VR | Max VR temp (°C) | 80 |
-| ASIC_TEMP_TOLERANCE | ASIC temp tolerance (±°C) | 0.25 |
+| MAX_VR | Max Allowed Voltage Regulator temp (°C) | 80 |
+| ASIC_TEMP_TOLERANCE | ASIC temp tolerance (±°C) | Default: ±0.25°C - Step value will change when Asic temp is above or below TARGET_ASIC ± ASIC_TEMP_TOLERANCE |
 | CORE_VOLTAGE | Core voltage (mV) | Normally inherits current bitaxe setting (else 1150) |
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
 | PORT | Server port | 3000 |
 | HISTORY_LIMIT | Max history entries | 172800 (2 days worth of data) |
-| STEP_DOWN_DEFAULT | Default Stepdown value | applied at server startup |
+| STEP_DOWN_DEFAULT | Default Stepdown value | Default 10: frequency will automatically be stepped down on starting server |
 
 ## Building the docker image manually
 
