@@ -115,7 +115,7 @@ function App() {
 							</Link>
 						</div>
 						<a
-							href="https://github.com/YOUR_REPO"
+							href="https://github.com/pmcochrane/bitaxe-stabiliser"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="p-2 hover:bg-slate-700 rounded"

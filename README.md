@@ -168,7 +168,7 @@ If you want to run this application in development mode, you can start a server 
 
 ```bash
 # Clone the repository from github
-git clone ......TODO
+git clone https://github.com/pmcochrane/bitaxe-stabiliser
 
 # Install dependencies
 npm install
