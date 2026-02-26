@@ -381,7 +381,7 @@ export class MonitorService {
 			if (this.state.stepDownCounter < 0) {
 				const oldStepDown = this.state.stepDown;
 				this.state.stepDown--;
-				this.changeMessage=`Average VR temp too high (${status.avgVrTemp.toFixed(1)}°C), slowing down: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`Average VR temp too high (${status.avgVrTemp.toFixed(1)}°C), slowing down: stepDown ${oldStepDown} -> ${this.state.stepDown} `;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -391,7 +391,7 @@ export class MonitorService {
 				if (this.state.drasticMeasureCounter >= this.drasticMeasureDelay) {
 					const oldStepDown = this.state.stepDown;
 					this.state.stepDown -= 10;
-					this.changeMessage = `Average ASIC temp Critical (${status.avgAsicTemp.toFixed(1)}°C), drastic measures: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage = `Average ASIC temp Critical (${status.avgAsicTemp.toFixed(1)}°C), drastic measures: stepDown ${oldStepDown} -> ${this.state.stepDown} `;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
 				} else {

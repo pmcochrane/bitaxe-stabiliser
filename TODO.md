@@ -1,7 +1,5 @@
 # Changes
 
-- Convert the step plot to a line graph removing duplicates and showing points
-- Remove duplicates from lines for VR Temp and ASIC temp. Less effect on ASIC Temp
 - Make the temp control range configurable eg +-0.5 +-1 +-2     Less convinced that this is necessary
 - Add call to monitor to pull room temp from an api and plot on graph
 - Write some analysis functions for the history file (indicate that some freq & core voltage are problem settings)
