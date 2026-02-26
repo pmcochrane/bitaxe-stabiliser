@@ -5,6 +5,7 @@
 - Write some analysis functions for the history file (indicate that some freq & core voltage are problem settings)
 - Write some notification method to alert remotely
 - Method for switching dashboard & history to view other stabilised bitaxes in the same deviceData folder. Stabiliser On and Manual Control would need to be unavailable in this mode
+- Add a power profile switch (eg. low, medium & high) which has independent settings stored. Will need a method of copying the current settings to these profiles. Clicking the button should change the active settings
 
 ## Bugs
 

@@ -1,8 +1,8 @@
 # Common base configuration (build + shared settings)
 x-base: &base               # ← note the x- prefix
   image: pmcochrane/bitaxe-stabiliser:${TAG:-latest}
-  #build:
-  #  context: .
+  build:
+    context: .
   volumes:
     - ./deviceData:/app/deviceData
   # environment: 
