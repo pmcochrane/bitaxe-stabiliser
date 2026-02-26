@@ -72,6 +72,7 @@ export default function Dashboard() {
 	const [isDarkMode, setIsDarkMode] = useState(false);
 	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
 	const [dismissHashrateAlert, setDismissHashrateAlert] = useState(false);
+	const [dismissHashrateDropAlert, setDismissHashrateDropAlert] = useState(false);
 	const [dismissLowStepAlert, setDismissLowStepAlert] = useState(false);
 	const [apiError, setApiError] = useState<string | null>(null);
 	const [lastStepDownValue, setLastStepDownValue] = useState<number | null>(null);
@@ -673,6 +674,23 @@ export default function Dashboard() {
 								Consider increasing the core voltage or lowering the max frequency to improve stability and achieve the expected hash rate.
 								<br /><br />
 								Aim is to keep the step value close to 0 at the ambient room temp to ensure the device is running as efficiently as possible while maintaining stability.
+							</div>
+						</AnimatedBanner>
+
+						{/* Hashrate dropped 25% below median alert */}
+						<AnimatedBanner show={!!(current && !dataUnavailable && getMedianHashrate > 0 && current.hashRate < getMedianHashrate * 0.75 && !dismissHashrateDropAlert)} className="mb-4 relative" onDismiss={() => setDismissHashrateDropAlert(true)}>
+							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded">
+								<strong className="text-lg">⚠️ Hash Rate Has Dropped Significantly</strong>
+								<br />
+								Current hash rate ({current ? (current.hashRate/1000.0).toFixed(3) : '0'} TH/s) is more than 25% below the median ({getMedianHashrate.toFixed(3)} TH/s).
+								<br /><br />
+								Check the bitaxe UI as your device may be malfunctioning. Common causes:
+								<ul className="list-disc ml-5 mt-2 text-sm">
+									<li>Core voltage is too low for the applied frequency setting.</li>
+									<li>Cooling issue causing thermal throttling or instability.</li>
+									<li>Power supply issue causing insufficient power delivery.</li>
+									<li>Hardware issue with the device.</li>	
+								</ul>
 							</div>
 						</AnimatedBanner>
 
