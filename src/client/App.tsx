@@ -10,6 +10,7 @@ function App() {
 	const [ip, setIp] = useState('');
 	const [hostname, setHostname] = useState('');
 	const [isDev, setIsDev] = useState(false);
+	const [version, setVersion] = useState('');
 	const [darkMode, setDarkMode] = useState(() => {
 		const stored = localStorage.getItem('darkMode');
 		return stored === null ? true : stored === 'true';
@@ -64,10 +65,11 @@ function App() {
 	}, [darkMode]);
 
 	useEffect(() => {
-		if (hostname) {
-			document.title = `${hostname}: Bitaxe Stabiliser`;
-		}
-	}, [hostname]);
+		fetch('/package.json')
+			.then(pkg => pkg.json())
+			.then(pkg => setVersion(pkg.version))
+			.catch(() => setVersion(''));
+	}, []);
 
 	return (
 		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -81,7 +83,11 @@ function App() {
 						/>
 						<h1 className="text-3xl font-bold self-center leading-none">Stabiliser</h1>
 						<h1 className="text-xl font-bold self-center leading-none">
-							{isDev && <span className="px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV Server</span>} &nbsp;
+							{isDev ? (
+								<span className="px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV Server</span>
+							) : version ? (
+								<span className="px-2 py-1 text-xs font-bold bg-gray-500 text-white rounded">v{version}</span>
+							) : null} &nbsp;
 							{hostname && <span className="text-sm text-gray-400">{hostname}</span>} &nbsp;
 							{ip && (
 								<a
