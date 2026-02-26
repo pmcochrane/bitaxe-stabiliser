@@ -1154,6 +1154,7 @@ export default function Dashboard() {
 								<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
 								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
 								<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
+								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={settingsForm.maxVr} stroke="#f97316" strokeDasharray="5 5" label={{ value: 'Max VR:'+settingsForm.maxVr+"°C", fill: '#f97316', fontSize: 20 }} />}
 								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
 								
 							</ComposedChart>
