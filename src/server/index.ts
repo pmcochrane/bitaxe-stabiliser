@@ -31,6 +31,7 @@ const MAX_FREQ = process.env.MAX_FREQ ? parseFloat(process.env.MAX_FREQ) : undef
 const STEP_DOWN_DEFAULT = process.env.STEP_DOWN_DEFAULT ? parseInt(process.env.STEP_DOWN_DEFAULT) : undefined;
 const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(process.env.LOW_STEP_ANALYSE_RANGE) : undefined;
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
+const ASIC_TEMP_TOLERANCE = process.env.ASIC_TEMP_TOLERANCE ? parseFloat(process.env.ASIC_TEMP_TOLERANCE) : undefined;
 
 async function getDataDir(): Promise<string> {
 	let retval=`./deviceData/${BITAXE_IP}`;
@@ -172,6 +173,17 @@ async function initializeSettings() {
 	} else {
 		settings.stepDownDefault = -10;
 		logIndex(`[default] stepDownDefault: ${settings.stepDownDefault}`);
+	}
+
+	// get asicTempTolerance from env, then settings file, then default to 0.25
+	if (ASIC_TEMP_TOLERANCE !== undefined) {
+		settings.asicTempTolerance = ASIC_TEMP_TOLERANCE;
+		logIndex(`[env] asicTempTolerance: ${settings.asicTempTolerance}`);
+	} else if (settings.asicTempTolerance) {
+		logIndex(`[settings.json] asicTempTolerance: ${settings.asicTempTolerance}`);
+	} else {
+		settings.asicTempTolerance = 0.25;
+		logIndex(`[default] asicTempTolerance: ${settings.asicTempTolerance}`);
 	}
 
 	store.saveSettings(settings);

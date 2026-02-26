@@ -135,6 +135,7 @@ There are other environment variables that can be set in your `docker-compose.ym
 | BITAXE_HOSTNAME | Hostname for deviceData folder | Falls back to IP if bitaxe API does not return a value |
 | TARGET_ASIC | Target ASIC temp (°C) | 65 |
 | MAX_VR | Max VR temp (°C) | 80 |
+| ASIC_TEMP_TOLERANCE | ASIC temp tolerance (±°C) | 0.25 |
 | CORE_VOLTAGE | Core voltage (mV) | Normally inherits current bitaxe setting (else 1150) |
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
 | PORT | Server port | 3000 |

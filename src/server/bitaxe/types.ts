@@ -46,6 +46,7 @@ export interface Settings {
 	lowStepAnalyseRange: number;
 	lowStepWarningThreshold: number;
 	stepDownDefault: number;
+	asicTempTolerance: number;
 }
 
 export interface HistoryEntry {

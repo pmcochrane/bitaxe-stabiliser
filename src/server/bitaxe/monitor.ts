@@ -357,8 +357,8 @@ export class MonitorService {
 	}
 
 	private evaluateAndAdjust(status: BitaxeStatus): void {
-		const fmaxAsic = this.settings.targetAsic + 0.25;
-		const fminAsic = this.settings.targetAsic - 0.25;
+		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
+		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
 		const fmaxVr = this.settings.maxVr;
 		const emergencyOverheat = this.settings.targetAsic + 2;
 

@@ -66,6 +66,7 @@ export class DataStore {
 			lowStepAnalyseRange: 50,
 			lowStepWarningThreshold: -10,
 			stepDownDefault: -10,
+			asicTempTolerance: 0.25,
 		};
 	}
 
