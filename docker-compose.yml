@@ -1,6 +1,6 @@
 # Common base configuration (build + shared settings)
 x-base: &base               # ← note the x- prefix
-  image: bitaxe-stabiliser:${TAG:-latest}
+  image: pmcochrane/bitaxe-stabiliser:${TAG:-latest}
   build:
     context: .
   volumes:
