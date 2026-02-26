@@ -238,7 +238,7 @@ export default function Dashboard() {
 		}
 	}, []);
 
-	const fetchGraphData = useCallback(async () => {
+	const fetchGraphData = useCallback(async (forceRefresh = false) => {
 		await withApiLock(async () => {
 			const randomId = Math.floor(Math.random() * 9000) + 1000;
 			const logPrefix = "[useCallback][fetchGraphData]["+randomId+"]";
@@ -247,7 +247,7 @@ export default function Dashboard() {
 			const isNewTimeRange = prevGraphHours.current !== graphHours;
 			prevGraphHours.current = graphHours;
 			
-			if (isNewTimeRange) {
+			if (isNewTimeRange || forceRefresh) {
 				setGraphRefreshing(true);
 			}
 		let basePoints: number;
@@ -263,10 +263,10 @@ export default function Dashboard() {
 			
 			try {
 				const cachedData = loadCachedGraphData();
-			const latestTimestamp = !isNewTimeRange && cachedData.length > 0
-				? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
-					new Date(entry.t) > new Date(latest) ? entry.t : latest, cachedData[0].t)
-				: undefined;
+			const latestTimestamp = (forceRefresh || isNewTimeRange) || cachedData.length === 0
+				? undefined
+				: cachedData.reduce((latest: string, entry: GraphDataEntry) => 
+					new Date(entry.t) > new Date(latest) ? entry.t : latest, cachedData[0].t);
 
 			const data = await getHistoryGraph(graphHours, latestTimestamp);
 				
@@ -1041,7 +1041,7 @@ export default function Dashboard() {
 									))}
 								</div>
 								<button
-									onClick={fetchGraphData}
+									onClick={() => fetchGraphData(true)}
 									className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
 								>
 									<RefreshCw className="w-4 h-4" />
