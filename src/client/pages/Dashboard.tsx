@@ -9,11 +9,11 @@ import { logUi } from '../utils/logger';
 import { Trash2, Play, Square, BarChart3, RefreshCw } from 'lucide-react';
 
 interface GraphDataEntry {
-	timestamp: string;
-	hashRate: number;
-	temp: number;
-	vrTemp: number;
-	stepDown: number;
+	t: string;
+	h: number;
+	a: number;
+	v: number;
+	s: number;
 }
 
 export default function Dashboard() {
@@ -108,16 +108,27 @@ export default function Dashboard() {
 		if (data.length === 0) return [];
 		const cutoffTime = new Date();
 		cutoffTime.setHours(cutoffTime.getHours() - MAX_GRAPH_AGE_HOURS);
-		return data.filter(entry => new Date(entry.timestamp) > cutoffTime);
+		return data.filter(entry => new Date(entry.t) > cutoffTime);
 	}, []);
 
 	const loadCachedGraphData = useCallback((): GraphDataEntry[] => {
 		try {
 			const cached = localStorage.getItem(GRAPH_STORAGE_KEY);
 			if (cached) {
-				const allData: GraphDataEntry[] = JSON.parse(cached);
+				const parsed = JSON.parse(cached);
+				let allData: GraphDataEntry[] = parsed;
+				if (parsed.length > 0 && 'timestamp' in parsed[0]) {
+					allData = parsed.map((entry: any) => ({
+						t: entry.timestamp,
+						h: entry.hashRate,
+						a: entry.temp,
+						v: entry.vrTemp,
+						s: entry.stepDown,
+					}));
+					localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
+				}
 				allData.forEach(entry => delete (entry as any).stepDownFilled);
-				return allData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+				return allData.sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime());
 			}
 		} catch (error) {
 			console.error('Failed to load cached graph data:', error);
@@ -162,7 +173,7 @@ export default function Dashboard() {
 				for (let j = bucketStart; j < bucketEnd && j < len; j++) {
 					if (points[j]) {
 						avgX += j;
-						avgY += points[j].temp;
+						avgY += points[j].a;
 						count++;
 					}
 				}
@@ -176,9 +187,9 @@ export default function Dashboard() {
 				for (let j = bucketStart; j < bucketEnd && j < len; j++) {
 					if (!points[j]) continue;
 					const area = Math.abs(
-						(a * (points[j].temp - avgY)) +
-						(j * (avgY - pointA.temp)) +
-						(avgX * (pointA.temp - points[j].temp))
+						(a * (points[j].a - avgY)) +
+						(j * (avgY - pointA.a)) +
+						(avgX * (pointA.a - points[j].a))
 					);
 					
 					if (area > maxArea) {
@@ -254,7 +265,7 @@ export default function Dashboard() {
 				const cachedData = loadCachedGraphData();
 			const latestTimestamp = !isNewTimeRange && cachedData.length > 0
 				? cachedData.reduce((latest: string, entry: GraphDataEntry) => 
-					new Date(entry.timestamp) > new Date(latest) ? entry.timestamp : latest, cachedData[0].timestamp)
+					new Date(entry.t) > new Date(latest) ? entry.t : latest, cachedData[0].t)
 				: undefined;
 
 			const data = await getHistoryGraph(graphHours, latestTimestamp);
@@ -262,7 +273,7 @@ export default function Dashboard() {
 				if (data.length === 0) {
 					logUi(logPrefix, 'No new data - using cache');
 					if (cachedData.length > 0) {
-						const filteredForDisplay = cachedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+						const filteredForDisplay = cachedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
 						const displayData = downsampleData(filteredForDisplay, targetPoints);
 						setGraphData(displayData);
 					}
@@ -271,27 +282,27 @@ export default function Dashboard() {
 				}
 
 				const transformed: GraphDataEntry[] = data.map(d => ({
-					timestamp: d.timestamp,
-					hashRate: Math.round((d.hashRate / 1000) * 1000) / 1000,
-					temp: d.temp,
-					vrTemp: d.vrTemp,
-					stepDown: d.stepDown,
+					t: d.timestamp,
+					h: Math.round((d.hashRate / 1000) * 1000) / 1000,
+					a: d.temp,
+					v: d.vrTemp,
+					s: d.stepDown,
 				}));
 
 				let mergedData: GraphDataEntry[];
 				if (cachedData.length === 0) {
 					mergedData = transformed;
 				} else {
-					const existingTimestamps = new Set(cachedData.map((d: GraphDataEntry) => d.timestamp));
-					const newEntries = transformed.filter((d: GraphDataEntry) => !existingTimestamps.has(d.timestamp));
+					const existingTimestamps = new Set(cachedData.map((d: GraphDataEntry) => d.t));
+					const newEntries = transformed.filter((d: GraphDataEntry) => !existingTimestamps.has(d.t));
 					mergedData = [...cachedData, ...newEntries].sort((a, b) => 
-						new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+						new Date(a.t).getTime() - new Date(b.t).getTime()
 					);
 				}
 
 				const downsampledData = downsampleData(mergedData, targetPoints);
 				saveGraphDataToCache(mergedData);
-				const filteredForDisplay = mergedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+				const filteredForDisplay = mergedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
 				const displayData = downsampleData(filteredForDisplay, targetPoints);
 				setGraphData(displayData);
 				setGraphRefreshing(false);
@@ -365,7 +376,7 @@ export default function Dashboard() {
 		}
 		const targetPoints = Math.max(50, Math.min(900, Math.round(basePoints)));
 		if (cachedData.length > 0) {
-			const filteredForDisplay = cachedData.filter(e => new Date(e.timestamp).getTime() > cutoffTime.getTime());
+			const filteredForDisplay = cachedData.filter(e => new Date(e.t).getTime() > cutoffTime.getTime());
 			const displayData = downsampleData(filteredForDisplay, targetPoints);
 			setGraphData(displayData);
 		}
@@ -397,7 +408,7 @@ export default function Dashboard() {
 
 	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
-		const sorted = graphData.map(d => d.hashRate).sort((a, b) => a - b);
+		const sorted = graphData.map(d => d.h).sort((a, b) => a - b);
 		const median = sorted[Math.floor(sorted.length / 2)];
 		const minAllowed = Math.max(0, sorted[0] * 0.9);
 		const maxAllowed = median * 1.05;
@@ -409,28 +420,28 @@ export default function Dashboard() {
 		if (graphData.length === 0) return 0;
 		let sum = 0;
 		for (const d of graphData) {
-			sum += d.hashRate;
+			sum += d.h;
 		}
 		return sum / graphData.length;
 	}, [graphData]);
 
 	const getMedianHashrate = useMemo((): number => {
 		if (graphData.length === 0) return 0;
-		const sorted = graphData.map(d => d.hashRate).sort((a, b) => a - b);
+		const sorted = graphData.map(d => d.h).sort((a, b) => a - b);
 		const mid = Math.floor(sorted.length / 2);
 		return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 	}, [graphData]);
 
 	const getMedianAsicTemp = useMemo((): number => {
 		if (graphData.length === 0) return 0;
-		const sorted = graphData.map(d => d.temp).sort((a, b) => a - b);
+		const sorted = graphData.map(d => d.a).sort((a, b) => a - b);
 		const mid = Math.floor(sorted.length / 2);
 		return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 	}, [graphData]);
 
 	const getMedianVrTemp = useMemo((): number => {
 		if (graphData.length === 0) return 0;
-		const sorted = graphData.map(d => d.vrTemp).sort((a, b) => a - b);
+		const sorted = graphData.map(d => d.v).sort((a, b) => a - b);
 		const mid = Math.floor(sorted.length / 2);
 		return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 	}, [graphData]);
@@ -440,10 +451,10 @@ export default function Dashboard() {
 		let min = Infinity;
 		let max = -Infinity;
 		for (const d of graphData) {
-			if (d.temp < min) min = d.temp;
-			if (d.temp > max) max = d.temp;
-			if (d.vrTemp < min) min = d.vrTemp;
-			if (d.vrTemp > max) max = d.vrTemp;
+			if (d.a < min) min = d.a;
+			if (d.a > max) max = d.a;
+			if (d.v < min) min = d.v;
+			if (d.v > max) max = d.v;
 		}
 		const padding = (max - min) * 0.1;
 		const domainMax = Math.max(max + padding, 100);
@@ -455,8 +466,8 @@ export default function Dashboard() {
 		let min = Infinity;
 		let max = -Infinity;
 		for (const d of graphData) {
-			if (d.stepDown < min) min = d.stepDown;
-			if (d.stepDown > max) max = d.stepDown;
+			if (d.s < min) min = d.s;
+			if (d.s > max) max = d.s;
 		}
 		min = Math.min(min, -5);
 		max = Math.max(max, 5);
@@ -1044,7 +1055,7 @@ export default function Dashboard() {
 								<ComposedChart data={graphData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
 									<CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4b5563' : '#e5e7eb'} />
 									<XAxis
-										dataKey="timestamp"
+										dataKey="t"
 										tickFormatter={(value: any) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 										stroke={isDarkMode ? '#9ca3af' : '#6b7280'}
 										tick={{ fontSize: 12 }}
@@ -1084,12 +1095,12 @@ export default function Dashboard() {
 										labelFormatter={(value: any) => new Date(value).toLocaleString()}
 									/>
 									<Legend onClick={handleLegendClick} />
-									<Area yAxisId="hashrate" type="monotone" dataKey="hashRate" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
-									<Bar yAxisId="step" dataKey="stepDown" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
+									<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
+									<Bar yAxisId="step" dataKey="s" name="Step" fill="#22c55e80" strokeWidth={0} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
 									{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />}
-									<Line yAxisId="temp" type="monotone" dataKey="temp" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
+									<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
 									{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
-									<Line yAxisId="temp" type="monotone" dataKey="vrTemp" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
+									<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
 									{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20 }} />}
 									
 								</ComposedChart>
