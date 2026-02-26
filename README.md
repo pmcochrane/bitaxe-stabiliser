@@ -111,6 +111,12 @@ If you want to build your own docker image, then follow these instructions.
 docker compose --build 
 ```
 
+If you want to use the version provided on docker hub then you may need to pull to get the latest version downloaded.
+```yaml
+# Pull the latest version to your PC
+docker compose pull
+```
+
 ## Starting Bitaxe Stabiliser
 
 Once you have created your `docker-compose.yml` file and built your custom docker image (if desired), you can start an instance for each of your servers with one command:
