@@ -537,7 +537,7 @@ export class MonitorService {
 			return;
 		}
 
-		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage!=="" ? ' '+this.changeMessage : ''} ${voltageSource}		Applying: Voltage=${adjustedVoltage}mV`);
+		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage !== '' ? this.changeMessage : ''}\t\tApplying Voltage=${adjustedVoltage}mV ${voltageSource}`);
 		this.changeMessage='';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
@@ -570,7 +570,7 @@ export class MonitorService {
 				if (this.state.stepDown < this.getMinStepDown()) {
 					this.state.stepDown = this.getMinStepDown();
 				}
-				this.changeMessage=`[Stabilise] Emergency cooling:	${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C	Step Down ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`[Stabilise] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 			}
 			return;
@@ -586,7 +586,7 @@ export class MonitorService {
 				}
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 				logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
-				this.changeMessage=`[Stabilise] VR temp high:	${status.avgVrTemp.toFixed(1)}°C		Step Down ${oldStepDown} -> ${this.state.stepDown} `;
+				this.changeMessage=`[Stabilise] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -606,7 +606,7 @@ export class MonitorService {
 					}
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
-					this.changeMessage = `[Stabilise] ASIC temp Critical:	${status.avgAsicTemp.toFixed(1)}°C	Drastic measures ${oldStepDown} -> ${this.state.stepDown} `;
+					this.changeMessage = `[Stabilise] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
 				} else {
@@ -623,7 +623,7 @@ export class MonitorService {
 					}
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
-					this.changeMessage=`[Stabilise] ASIC temp high:	${status.avgAsicTemp.toFixed(1)}°C	Step Down ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage=`[Stabilise] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 				}
 			}
@@ -640,7 +640,7 @@ export class MonitorService {
 							if (this.state.stepDown > this.maxStepUp) {
 								this.state.stepDown = this.maxStepUp;
 							} else {
-								this.changeMessage=`[Stabilise] ASIC temp low:	${status.avgAsicTemp.toFixed(1)}°C	Step Up ${oldStepDown} -> ${this.state.stepDown}`;
+								this.changeMessage=`[Stabilise] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown} -> ${this.state.stepDown}`;
 								this.applyChange = true;
 							}
 						}

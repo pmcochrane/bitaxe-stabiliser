@@ -717,7 +717,7 @@ export default function Dashboard() {
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-2">
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
-									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} TH/s</div>
+									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} <span className="text-sm text-gray-400">TH/s</span></div>
 								<div className={`text-xs text-right ${getToExpectedColor(current.toExpected)}`} 
 										title={current.toExpected < 0 ? 'Negative value may indicate core voltage is too low to attain the expected frequency. Consider increasing core voltage.' : ''}>
 									To Expected: {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
@@ -728,20 +728,20 @@ export default function Dashboard() {
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">ASIC Temp</div>
 									<div className={`text-xl font-bold ${getTempColor(current.temp, settingsForm.targetAsic)}`}>
-										{current.temp.toFixed(3)}°C
+										{current.temp.toFixed(3)} <span className="text-sm">°C</span>
 									</div>
-									<div className="text-xs text-gray-400">Target: {settingsForm.targetAsic}°C</div>
+									<div className="text-xs text-gray-400">Target: {settingsForm.targetAsic} °C</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">VR Temp</div>
 									<div className={`text-xl font-bold ${getTempColor(current.vrTemp, settingsForm.maxVr)}`}>
-										{current.vrTemp}°C
+										{current.vrTemp} <span className="text-sm">°C</span>
 									</div>
-									<div className="text-xs text-gray-400">Max: {settingsForm.maxVr}°C</div>
+									<div className="text-xs text-gray-400">Max: {settingsForm.maxVr} °C</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Power</div>
-									<div className="text-xl font-bold dark:text-white">{current.power.toFixed(1)} W</div>
+									<div className="text-xl font-bold dark:text-white">{current.power.toFixed(1)} <span className="text-sm text-gray-400">W</span></div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Step</div>
@@ -756,19 +756,19 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Reduced by ${Math.abs(current.stepDown * 6.25).toFixed(2)} MHz`}>Frequency</div>
-									<div className="text-xl font-bold dark:text-white">{current.frequency} MHz</div>
+									<div className="text-xl font-bold dark:text-white">{current.frequency} <span className="text-sm text-gray-400">MHz</span></div>
 									<div className={`text-sm ${current.frequency > settingsForm.maxFreq ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}
 										title={`Step at ${current.stepDown} forces a reduction of ${Math.abs(current.stepDown * 6.25).toFixed(2)} MHz`}>
-										{current.frequency > settingsForm.maxFreq ? '↑ +' : '↓ -'}{Math.abs(current.frequency - settingsForm.maxFreq).toFixed(2)} MHz
+										{current.frequency > settingsForm.maxFreq ? '↑ +' : '↓ -'}{Math.abs(current.frequency - settingsForm.maxFreq).toFixed(2)} <span className="text-xs">MHz</span>
 									</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Offset: ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>Core Voltage</div>
-									<div className="text-xl font-bold dark:text-white">{current.coreVoltage} mV</div>
+									<div className="text-xl font-bold dark:text-white">{current.coreVoltage} <span className="text-sm text-gray-400">mV</span></div>
 									<div className={`text-sm ${current.coreVoltage < settingsForm.coreVoltage ? 'text-amber-600 dark:text-amber-400' : current.coreVoltage > settingsForm.coreVoltage ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
 											title={`Step at ${current.stepDown} forces an offset of ${Math.abs(current.coreVoltage - settingsForm.coreVoltage)}mV from base ${settingsForm.coreVoltage}mV`}>
 										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}
-											{Math.abs(current.coreVoltage - settingsForm.coreVoltage)} mV
+											{Math.abs(current.coreVoltage - settingsForm.coreVoltage)} <span className="text-xs">mV</span>
 									</div>
 									{status?.settings.maxCoreVoltage && (
 										<div className="text-xs text-gray-400 dark:text-gray-500">Max: {status.settings.maxCoreVoltage} mV</div>
@@ -776,7 +776,7 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Efficiency</div>
-									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(1)} J/TH</div>
+									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(1)} <span className="text-sm text-gray-400">J/TH</span></div>
 								</div>
 							</div>
 						) : apiError ? (
