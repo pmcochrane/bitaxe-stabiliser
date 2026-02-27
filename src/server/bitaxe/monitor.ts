@@ -577,7 +577,7 @@ export class MonitorService {
 					this.state.stepDown = this.getMinStepDown();
 				}
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-				logMonitor(`[Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
+				logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
 				this.changeMessage=`[Stabilise] VR temp high:	${status.avgVrTemp.toFixed(1)}°C		Step Down ${oldStepDown} -> ${this.state.stepDown} `;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
@@ -586,7 +586,7 @@ export class MonitorService {
 
 			if (this.autotuneEnabled && this.currentTunedVoltage !== null && this.currentTunedVoltage < this.maxCoreVoltage) {
 				this.maxCoreVoltage = this.currentTunedVoltage;
-				logMonitor(`[Autotune] VR temp exceeded maxVr (${fmaxVr}°C). Reducing maxCoreVoltage to ${this.maxCoreVoltage}mV`);
+				logMonitor(`[${this.iteration}] [Autotune] VR temp exceeded maxVr (${fmaxVr}°C). Reducing maxCoreVoltage to ${this.maxCoreVoltage}mV`);
 			}
 		} else if (status.avgAsicTemp > fmaxAsic && this.autoAdjustFreq) {
 			if (status.temp > emergencyOverheat) {
@@ -597,7 +597,7 @@ export class MonitorService {
 						this.state.stepDown = this.getMinStepDown();
 					}
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-					logMonitor(`[Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
+					logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
 					this.changeMessage = `[Stabilise] ASIC temp Critical:	${status.avgAsicTemp.toFixed(1)}°C	Drastic measures ${oldStepDown} -> ${this.state.stepDown} `;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
@@ -614,7 +614,7 @@ export class MonitorService {
 						this.state.stepDown = this.getMinStepDown();
 					}
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-					logMonitor(`[Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
+					logMonitor(`[${this.iteration}] [Stabilise] Blocking step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
 					this.changeMessage=`[Stabilise] ASIC temp high:	${status.avgAsicTemp.toFixed(1)}°C	Step Down ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 				}
@@ -637,7 +637,7 @@ export class MonitorService {
 							}
 						}
 					} else {
-						// logMonitor(`[Stabilise] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
+						// logMonitor(`[${this.iteration}] [Stabilise] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
 						this.state.stepUpCounter = this.stepUpEveryXPasses;
 					}
 				}
@@ -664,7 +664,7 @@ export class MonitorService {
 				this.stableLoopCount = 0;
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
-				logMonitor(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);
+				logMonitor(`[${this.iteration}] [Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);
 			}
 
 			this.sweepIterationsCounter++;
