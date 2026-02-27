@@ -56,7 +56,6 @@ export class MonitorService {
 	private stepDownBlocklistDuration = 150;
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
-	private stableLoopCount = 0;
 	private lastStepDown: number | null = null;
 	private settleDelayCounter = 0;
 	private autotuneIntervalCounts = 30;
@@ -393,11 +392,9 @@ export class MonitorService {
 
 	private runAutotune(): void {
 		if (this.state.stepDown === this.lastStepDown) {
-			this.stableLoopCount++;
 		} else {
 			this.lastStepDown = this.state.stepDown;
-			this.stableLoopCount = 0;
-			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
+			this.settleDelayCounter = this.autotuneIntervalCounts;
 			this.currentTunedVoltage = null;
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
@@ -408,10 +405,6 @@ export class MonitorService {
 
 		if (this.settleDelayCounter > 0) {
 			this.settleDelayCounter--;
-			return;
-		}
-
-		if (this.stableLoopCount < 20) {
 			return;
 		}
 
@@ -456,7 +449,6 @@ export class MonitorService {
 			this.flipFlopCount = 0;
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
-			this.stableLoopCount = 0;
 			return;
 		}
 
@@ -466,7 +458,6 @@ export class MonitorService {
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
-				this.stableLoopCount = 0;
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`)
 				// Save increased voltage for this frequency if we don't have one already
@@ -481,14 +472,13 @@ export class MonitorService {
 				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached (no change): ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
-				this.stableLoopCount = 0;
+				this.settleDelayCounter = this.autotuneIntervalCounts;
 			}
 		} else if (currentVoltage > 700 && toExpected > 1) {
 			currentVoltage -= 5;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.applyChange = true;
-			this.stableLoopCount = 0;
 			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			// Save decreased voltage for this frequency if we don't have one already
@@ -503,7 +493,7 @@ export class MonitorService {
 			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Passable voltage found: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
-			this.stableLoopCount = 0;
+			this.settleDelayCounter = this.autotuneIntervalCounts;
 		}
 	}
 
@@ -544,7 +534,6 @@ export class MonitorService {
 		this.appliedCoreVoltage = adjustedVoltage;
 		this.state.lastFrequencyApplied = this.desiredFreq;
 		this.state.lastCoreVoltageApplied = adjustedVoltage;
-		this.state.stepUpCounter = this.stepUpEveryXPasses;
 		this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.applyChange = false;
 	}
@@ -669,7 +658,6 @@ export class MonitorService {
 				this.voltageMap.set(this.desiredFreq, throttleVoltage);
 				this.applyChange = true;
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
-				this.stableLoopCount = 0;
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 				logMonitor(`[${this.iteration}] [Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);
