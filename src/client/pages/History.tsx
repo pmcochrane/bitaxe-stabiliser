@@ -26,7 +26,7 @@ export default function History() {
 		maxHistoryEntries: 172800,
 		lowStepAnalyseRange: 50,
 		lowStepWarningThreshold: -10,
-		stepDownDefault: -10,
+		stepDownDefault: 0,
 		maxCoreVoltage: 1450,
 	});
 	const { modalState, showAlert, closeModal } = useModal();

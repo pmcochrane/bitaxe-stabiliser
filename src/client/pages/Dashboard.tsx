@@ -65,7 +65,7 @@ export default function Dashboard() {
 		maxHistoryEntries: 172800,
 		lowStepAnalyseRange: 50,
 		lowStepWarningThreshold: -10,
-		stepDownDefault: -10,
+		stepDownDefault: 0,
 		maxCoreVoltage: 1450,
 	});
 	const settingsFormRef = useRef(settingsForm);
@@ -848,7 +848,7 @@ export default function Dashboard() {
 									className="hidden"
 									disabled={dataUnavailable}
 								/>
-								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Actively Adjust Temperature</span>
+								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Stabilisation On</span>
 							</label>
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === false 

@@ -167,14 +167,14 @@ async function initializeSettings() {
 		logIndex(`[default] lowStepWarningThreshold: ${settings.lowStepWarningThreshold}`);
 	}
 
-	// get stepDownDefault from env, then settings file, then default to -10
+	// get stepDownDefault from env, then settings file, then default to 0
 	if (STEP_DOWN_DEFAULT !== undefined) {
 		settings.stepDownDefault = STEP_DOWN_DEFAULT;
 		logIndex(`[env] stepDownDefault: ${settings.stepDownDefault}`);
 	} else if (settings.stepDownDefault !== undefined) {
 		logIndex(`[settings.json] stepDownDefault: ${settings.stepDownDefault}`);
 	} else {
-		settings.stepDownDefault = -10;
+		settings.stepDownDefault = 0;
 		logIndex(`[default] stepDownDefault: ${settings.stepDownDefault}`);
 	}
 

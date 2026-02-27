@@ -70,7 +70,7 @@ export class DataStore {
 			maxHistoryEntries: 172800,
 			lowStepAnalyseRange: 50,
 			lowStepWarningThreshold: -10,
-			stepDownDefault: -10,
+			stepDownDefault: 0,
 			asicTempTolerance: 0.25,
 			maxCoreVoltage: 1450,
 		};
