@@ -462,16 +462,17 @@ export class MonitorService {
 
 		if (toExpected < 0) {
 			if (currentVoltage < this.maxCoreVoltage) {
-				if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
-					this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-				}
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
 				this.stableLoopCount = 0;
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`)
+				// Save increased voltage for this frequency if we don't have one already
+				if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
+					this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+				}
 			} else {
 				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
@@ -483,9 +484,6 @@ export class MonitorService {
 				this.stableLoopCount = 0;
 			}
 		} else if (currentVoltage > 700 && toExpected > 1) {
-			if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-			}
 			currentVoltage -= 5;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
@@ -493,6 +491,10 @@ export class MonitorService {
 			this.stableLoopCount = 0;
 			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+			// Save decreased voltage for this frequency if we don't have one already
+			if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+			}
 		} else {
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
