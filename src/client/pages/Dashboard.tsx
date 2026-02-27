@@ -1125,10 +1125,10 @@ export default function Dashboard() {
 									yAxisId="temp"
 									orientation="right"
 									domain={getTempDomain}
-									stroke="#ef4444"
-									tick={{ fontSize: 12, fill: '#ef4444' }}
+									stroke="#b91c1c"
+									tick={{ fontSize: 12, fill: '#b91c1c' }}
 									tickFormatter={(value) => Math.round(value).toString()}
-									label={{ value: '°C', angle: 0, position: 'right', offset: -35, fill: '#ef4444' }}
+									label={{ value: '°C', angle: 0, position: 'right', offset: -35, fill: '#b91c1c' }}
 								/>
 								<YAxis
 									yAxisId="step"
@@ -1149,14 +1149,17 @@ export default function Dashboard() {
 								/>
 								<Legend onClick={handleLegendClick} />
 								<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
+								
 								<Area yAxisId="step" type="monotone" dataKey="s" name="Step" stroke="#22c55e" fill="#22c55e80" strokeWidth={1.5} dot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
 								{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#d2d1e0ff', fontSize: 20 }} />}
-								<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
-								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={settingsForm.targetAsic} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Target ASIC: '+settingsForm.targetAsic+'°C', fill: '#ef4444', fontSize: 20, position: 'top', offset: 10 }} />}
-								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20, position: 'bottom', offset: 10 }} />}
+								
+								<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#b83636" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
+								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={getMedianAsicTemp} stroke="#b62626" strokeDasharray="15 5" label={{ value: 'Median ASIC Temp:'+getMedianAsicTemp.toFixed(1)+"°C", fill: '#b62626', fontSize: 20, position: 'bottom', offset: 15 }} />}
+								{legendVisibility.temp && <ReferenceLine yAxisId="temp" y={settingsForm.targetAsic} stroke="#b83636" strokeDasharray="3 5" label={{ value: 'Target ASIC: '+settingsForm.targetAsic+'°C', fill: '#b83636', fontSize: 20, position: 'top', offset: 15 }} />}
+								
 								<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
-								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={settingsForm.maxVr} stroke="#f97316" strokeDasharray="5 5" label={{ value: 'Max VR:'+settingsForm.maxVr+"°C", fill: '#f97316', fontSize: 20, position: 'top', offset: 10 }} />}
-								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c3c2d6ff" strokeDasharray="5 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#d2d1e0ff', fontSize: 20, position: 'bottom', offset: 10 }} />}
+								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c2410c" strokeDasharray="3 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#c2410c', fontSize: 20, position: 'bottom', offset: 5 }} />}
+								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={settingsForm.maxVr} stroke="#f97316" strokeDasharray="15 5" label={{ value: 'Max VR:'+settingsForm.maxVr+"°C", fill: '#f97316', fontSize: 20, position: 'top', offset: 5 }} />}
 								
 							</ComposedChart>
 						</ResponsiveContainer>
