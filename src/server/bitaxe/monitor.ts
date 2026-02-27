@@ -33,7 +33,7 @@ export class MonitorService {
 	private getMinStepDown(): number {
 		return Math.floor((this.settings.maxFreq - 400) / 6.25) * -1;
 	}
-	private sweepIterations = 50; //150;
+	private sweepIterations = 150;
 	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
 	private sweepStartTime = '';
