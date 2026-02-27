@@ -196,7 +196,7 @@ export class MonitorService {
 		this.sweepIterationsCounter = 0;
 		this.sweepStartTime = new Date().toISOString();
 		this.store.clearHashrange();
-		this.changeMessage=`[Sweep] started: Step ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] [1/1] Started: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: '${this.changeMessage}',
@@ -210,7 +210,7 @@ export class MonitorService {
 		this.state.stepDown = 0;
 		this.autoAdjustFreq = true;
 		this.applyChange = true;
-		this.changeMessage=`[Sweep] stopped: Step ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: '${this.changeMessage}',
@@ -614,7 +614,7 @@ export class MonitorService {
 		if (this.state.sweepMode) {
 			this.sweepIterationsCounter++;
 			if (this.sweepIterationsCounter === 1 || this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
-				logMonitor(`[Sweep] Step ${this.state.stepDown}, iteration=${this.sweepIterationsCounter}/${this.sweepIterations}`);
+				logMonitor(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Step ${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz - To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${(this.overallAverageHashRate / 1e6).toFixed(2)} MH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/MH`);
 			}
 			if (this.sweepIterationsCounter >= this.sweepIterations) {
 				if (this.state.stepDown >= 0) {
@@ -623,7 +623,7 @@ export class MonitorService {
 					const oldStepDown = this.state.stepDown;
 					this.state.stepDown++;
 					this.sweepIterationsCounter = 0;
-					this.changeMessage=`[Sweep] Sweep increment: Step ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Sweep increment: Step ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 				}
 			}
