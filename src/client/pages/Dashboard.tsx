@@ -66,6 +66,7 @@ export default function Dashboard() {
 		lowStepAnalyseRange: 50,
 		lowStepWarningThreshold: -10,
 		stepDownDefault: -10,
+		maxCoreVoltage: 1450,
 	});
 	const settingsFormRef = useRef(settingsForm);
 	const [initialLoad, setInitialLoad] = useState(true);
@@ -769,6 +770,9 @@ export default function Dashboard() {
 										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}
 											{Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)} mV
 									</div>
+									{status?.settings.maxCoreVoltage && (
+										<div className="text-xs text-gray-400 dark:text-gray-500">Max: {status.settings.maxCoreVoltage} mV</div>
+									)}
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Efficiency</div>

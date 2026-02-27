@@ -33,7 +33,7 @@ const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(pro
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 const ASIC_TEMP_TOLERANCE = process.env.ASIC_TEMP_TOLERANCE ? parseFloat(process.env.ASIC_TEMP_TOLERANCE) : undefined;
 const AUTOTUNE_COREVOLTAGE = process.env.AUTOTUNE_COREVOLTAGE ? process.env.AUTOTUNE_COREVOLTAGE !== 'false' : true;
-const MAX_COREVOLTAGE = process.env.MAX_COREVOLTAGE ? parseInt(process.env.MAX_COREVOLTAGE) : 1400;
+const MAX_COREVOLTAGE = process.env.MAX_COREVOLTAGE ? parseInt(process.env.MAX_COREVOLTAGE) : 1450;
 
 async function getDataDir(): Promise<string> {
 	let retval=`./deviceData/${BITAXE_IP}`;

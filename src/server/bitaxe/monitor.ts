@@ -50,7 +50,8 @@ export class MonitorService {
 	private autoAdjustFreq = true;
 
 	private autotuneEnabled = false;
-	private maxCoreVoltage = 1400;
+	private maxCoreVoltage = 1450;
+	private initialMaxCoreVoltage = 1450;
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
 	private stableLoopCount = 0;
@@ -72,6 +73,7 @@ export class MonitorService {
 		if (autotuneOptions) {
 			this.autotuneEnabled = autotuneOptions.autotuneEnabled;
 			this.maxCoreVoltage = autotuneOptions.maxCoreVoltage;
+			this.initialMaxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			for (const entry of autotuneOptions.voltageMap) {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
@@ -98,6 +100,10 @@ export class MonitorService {
 		}
 		this.settings = { ...this.settings, ...settings };
 
+		if (settings.maxCoreVoltage !== undefined) {
+			this.maxCoreVoltage = Math.min(settings.maxCoreVoltage, this.initialMaxCoreVoltage);
+		}
+
 		if (settings.maxFreq !== undefined || settings.coreVoltage !== undefined) {
 			const frequency = settings.maxFreq ?? this.settings.maxFreq;
 			const coreVoltage = settings.coreVoltage ?? this.settings.coreVoltage;
@@ -106,11 +112,15 @@ export class MonitorService {
 	}
 
 	getSettings(): Settings {
-		return { ...this.settings };
+		return { ...this.settings, maxCoreVoltage: this.maxCoreVoltage };
 	}
 
 	getState(): MonitorState {
 		return { ...this.state };
+	}
+
+	getMaxCoreVoltage(): number {
+		return this.maxCoreVoltage;
 	}
 
 	getSweepInfo(): { iterations: number; counter: number } {
@@ -439,8 +449,7 @@ export class MonitorService {
 		}
 
 		if (toExpected < 0) {
-			const maxVoltage = baseline + 40;
-			if (currentVoltage < maxVoltage && currentVoltage < this.maxCoreVoltage) {
+			if (currentVoltage < this.maxCoreVoltage) {
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
@@ -559,6 +568,11 @@ export class MonitorService {
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
+			}
+
+			if (this.autotuneEnabled && this.currentTunedVoltage !== null && this.currentTunedVoltage < this.maxCoreVoltage) {
+				this.maxCoreVoltage = this.currentTunedVoltage;
+				logMonitor(`[Autotune] VR temp exceeded maxVr (${fmaxVr}°C). Reducing maxCoreVoltage to ${this.maxCoreVoltage}mV`);
 			}
 		} else if (status.avgAsicTemp > fmaxAsic && this.autoAdjustFreq) {
 			if (status.temp > emergencyOverheat) {

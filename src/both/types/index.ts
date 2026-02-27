@@ -9,6 +9,7 @@ export interface Settings {
 	lowStepAnalyseRange: number;
 	lowStepWarningThreshold: number;
 	stepDownDefault: number;
+	maxCoreVoltage: number;
 }
 
 export interface HistoryEntry {

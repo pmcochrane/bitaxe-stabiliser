@@ -47,6 +47,7 @@ export interface Settings {
 	lowStepWarningThreshold: number;
 	stepDownDefault: number;
 	asicTempTolerance: number;
+	maxCoreVoltage: number;
 }
 
 export interface HistoryEntry {
