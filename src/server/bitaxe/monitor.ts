@@ -57,7 +57,7 @@ export class MonitorService {
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
 	private stableLoopCount = 0;
-	private lastStepDown = 0;
+	private lastStepDown: number | null = null;
 	private settleDelayCounter = 0;
 	private autotuneIntervalCounts = 30;
 	private currentTunedVoltage: number | null = null;
