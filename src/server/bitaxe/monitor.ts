@@ -33,7 +33,7 @@ export class MonitorService {
 	private getMinStepDown(): number {
 		return Math.floor((this.settings.maxFreq - 400) / 6.25) * -1;
 	}
-	private sweepIterations = 100;
+	private sweepIterations = 150;
 	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
 	private sweepStartTime = '';
@@ -55,10 +55,14 @@ export class MonitorService {
 	private baselineVoltages: Map<number, number> = new Map();
 	private stableLoopCount = 0;
 	private lastStepDown = 0;
+	private settleDelayCounter = 0;
+	private autotuneIntervalCounts = 30;
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
 	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
 	private flipFlopCount = 0;
+	private bestToExpected = -Infinity;
+	private bestVoltage = 0;
 
 	constructor(settings: Settings, store: DataStore, autotuneOptions?: AutotuneOptions) {
 		this.settings = settings;
@@ -371,9 +375,17 @@ export class MonitorService {
 		} else {
 			this.lastStepDown = this.state.stepDown;
 			this.stableLoopCount = 0;
+			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 			this.currentTunedVoltage = null;
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
+			this.bestToExpected = -Infinity;
+			this.bestVoltage = 0;
+			return;
+		}
+
+		if (this.settleDelayCounter > 0) {
+			this.settleDelayCounter--;
 			return;
 		}
 
@@ -387,6 +399,11 @@ export class MonitorService {
 		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
 			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
 			: 0;
+
+		if (toExpected > this.bestToExpected) {
+			this.bestToExpected = toExpected;
+			this.bestVoltage = currentVoltage;
+		}
 
 		const flipFlopEntry = { voltage: currentVoltage, toExpected, toExpectedDirection: 0 };
 		const lastEntry = this.autotuneFlipFlop[this.autotuneFlipFlop.length - 1];
@@ -408,14 +425,15 @@ export class MonitorService {
 		}
 
 		if (this.flipFlopCount >= 3) {
-			const winner = this.autotuneFlipFlop.reduce((a, b) => a.toExpected > b.toExpected ? a : b);
-			currentVoltage = winner.voltage;
+			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, winner.toExpected, this.overallAverageHashRate);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${winner.toExpected.toFixed(2)}%		Flip-flop detected! Selected ${currentVoltage}mV`);
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Flip-flop detected! Selected best ${currentVoltage}mV`);
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
+			this.bestToExpected = -Infinity;
+			this.bestVoltage = 0;
 			this.stableLoopCount = 0;
 			return;
 		}
@@ -428,35 +446,34 @@ export class MonitorService {
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
 				this.stableLoopCount = 0;
+				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV`);
 			} else {
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate);
-				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Max voltage reached: ${currentVoltage}mV`);
-				this.stableLoopCount = 0;
-			}
-		} else if (toExpected > 1) {
-		if (currentVoltage > 700) {
-				currentVoltage -= 5;
+				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				this.applyChange = true;
-				this.stableLoopCount = 0;
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV`);
-			} else {
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate);
-				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Min voltage reached: ${currentVoltage}mV`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached, using best: ${currentVoltage}mV`);
+				this.bestToExpected = -Infinity;
+				this.bestVoltage = 0;
 				this.stableLoopCount = 0;
 			}
-		} else {
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate);
+		} else if (currentVoltage > 700 && toExpected > 1) {
+			currentVoltage -= 5;
+			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			if (this.currentTunedVoltage !== null) {
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Optimal voltage found: ${currentVoltage}mV`);
-			} else {
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		No adjustment needed: ${currentVoltage}mV`);
-			}
+			this.applyChange = true;
+			this.stableLoopCount = 0;
+			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV`);
+		} else {
+			currentVoltage = this.bestVoltage;
+			this.currentTunedVoltage = currentVoltage;
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
+			this.voltageMap.set(this.desiredFreq, currentVoltage);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Optimal found, using best: ${currentVoltage}mV`);
+			this.bestToExpected = -Infinity;
+			this.bestVoltage = 0;
 			this.stableLoopCount = 0;
 		}
 	}
@@ -477,17 +494,7 @@ export class MonitorService {
 		}
 
 		const hasTunedVoltage = this.voltageMap.has(this.desiredFreq);
-		let voltageOffset = 0;
-		
-		if (!hasTunedVoltage) {
-			voltageOffset = this.state.stepDown>5 
-								? Math.floor(Math.abs(this.state.stepDown) / 5) * 5  // Increase voltage for stepDown values above 5, in increments of 5mV every 5 stepDowns
-								: this.state.stepDown<-5 
-									? Math.floor(Math.abs(this.state.stepDown+5) / 5) * -5 // Decrease voltage for stepDown values below -5, in increments of 5mV every 5 stepDowns
-									: 0;
-		}
-		
-		let adjustedVoltage = baseVoltage + voltageOffset;
+		let adjustedVoltage = baseVoltage;
 
 		if (adjustedVoltage > this.maxCoreVoltage) {
 			adjustedVoltage = this.maxCoreVoltage;
@@ -501,7 +508,7 @@ export class MonitorService {
 			return;
 		}
 
-		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage!=="" ? ' '+this.changeMessage : ''} 		Applying: Voltage=${adjustedVoltage}mV (offset: ${voltageOffset}mV) `);
+		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage!=="" ? ' '+this.changeMessage : ''} 		Applying: Voltage=${adjustedVoltage}mV`);
 		this.changeMessage='';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 

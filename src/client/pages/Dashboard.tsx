@@ -8,6 +8,17 @@ import { getTempColor, getToExpectedColor } from '../utils/colors';
 import { logUi } from '../utils/logger';
 import { Trash2, Play, Square, BarChart3, RefreshCw, Gauge } from 'lucide-react';
 
+function formatTimeAgo(dateStr: string): string {
+	const diff = Date.now() - new Date(dateStr).getTime();
+	const hours = Math.floor(diff / (1000 * 60 * 60));
+	const days = Math.floor(hours / 24);
+	const remainingHours = hours % 24;
+	if (days > 0) {
+		return `${days}d ${remainingHours}h ago`;
+	}
+	return `${hours}h ago`;
+}
+
 interface GraphDataEntry {
 	t: number;
 	h: number;
@@ -1063,21 +1074,27 @@ export default function Dashboard() {
 												<table className="w-full text-xs bg-white dark:bg-gray-800">
 													<thead>
 														<tr className="border-b dark:border-gray-600">
-															<th className="text-right p-1 dark:text-white w-1/4">Frequency (MHz)</th>
-															<th className="text-right p-1 dark:text-white w-1/4">Core Voltage (mV)</th>
-															<th className="text-right p-1 dark:text-white w-1/4">toExpected (%)</th>
-															<th className="text-right p-1 dark:text-white w-1/4">Hashrate (GH/s)</th>
+															<th className="text-right p-1 dark:text-white w-1/6">Step</th>
+															<th className="text-right p-1 dark:text-white w-1/6">Frequency (MHz)</th>
+															<th className="text-right p-1 dark:text-white w-1/6">Core Voltage (mV)</th>
+															<th className="text-right p-1 dark:text-white w-1/6">toExpected (%)</th>
+															<th className="text-right p-1 dark:text-white w-1/6">Hashrate (GH/s)</th>
+															<th className="text-right p-1 dark:text-white w-1/6">Last Changed</th>
 														</tr>
 													</thead>
 													<tbody>
-														{voltages.map((v, i) => (
+														{voltages.map((v, i) => {
+															const step = Math.round((v.frequency - settingsForm.maxFreq) / 6.25);
+															return (
 															<tr key={i} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-																<td className="p-1 text-right dark:text-white w-1/4">{v.frequency.toFixed(3)}</td>
-																<td className="p-1 text-right dark:text-white w-1/4">{v.coreVoltage.toFixed(1)}</td>
-																<td className={`p-1 text-right w-1/4 ${getToExpectedColor(v.toExpected)}`}>{v.toExpected.toFixed(2)}</td>
-																<td className="p-1 text-right dark:text-white w-1/4">{(v.avgHashRate / 1000).toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-1/6">{step}</td>
+																<td className="p-1 text-right dark:text-white w-1/6">{v.frequency.toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-1/6">{v.coreVoltage.toFixed(1)}</td>
+																<td className={`p-1 text-right w-1/6 ${getToExpectedColor(v.toExpected)}`}>{v.toExpected.toFixed(2)}</td>
+																<td className="p-1 text-right dark:text-white w-1/6">{(v.avgHashRate / 1000).toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-1/6">{v.lastUpdate ? formatTimeAgo(v.lastUpdate) : '-'}</td>
 															</tr>
-														))}
+														);})}
 													</tbody>
 												</table>
 											</div>
