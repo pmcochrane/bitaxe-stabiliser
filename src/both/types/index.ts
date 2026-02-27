@@ -76,3 +76,13 @@ export interface ControlCommand {
 	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
 	value?: number;
 }
+
+export interface VoltageEntry {
+	frequency: number;
+	coreVoltage: number;
+	toExpected: number;
+	avgHashRate: number;
+	avgAsicTemp: number;
+	avgVrTemp: number;
+	lastUpdate: string;
+}

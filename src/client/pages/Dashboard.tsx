@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAnalysis, getVoltages, HashrangeAnalysis } from '../services/api';
-import type { StatusResponse, Settings, HistoryEntry } from '../../both/types';
+import type { StatusResponse, Settings, HistoryEntry, VoltageEntry } from '../../both/types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine, LineChart } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
 import { AnimatedBanner } from '../components/AnimatedBanner';
@@ -182,9 +182,9 @@ export default function Dashboard() {
 					dropped++;
 				}
 			}
-			if (dropped > 0) {
-				console.log(`Graph data: orig: ${sorted.length} -> ${dropped} consecutive duplicates dropped -> ${deduped.length} stored`);
-			}
+			// if (dropped > 0) {
+			// 	console.log(`Graph data: orig: ${sorted.length} -> ${dropped} consecutive duplicates dropped -> ${deduped.length} stored`);
+			// }
 			localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(deduped));
 		} catch (error) {
 			console.error('Failed to save graph data to cache:', error);
@@ -1023,28 +1023,28 @@ export default function Dashboard() {
 														{analysis.allData.map((e, i) => (
 															<tr key={i} className={`border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
 																<td className="p-1 dark:text-white">
-																	{e.frequency.toFixed(3)}
+																	{(e.frequency ?? 0).toFixed(3)}
 																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
 																</td>
-																<td className="p-1 text-right dark:text-white">{e.coreVoltage.toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white">{(e.coreVoltage ?? 0).toFixed(1)}</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{(e.avgHashRate/1000).toFixed(3)}
+																	{((e.avgHashRate ?? 0)/1000).toFixed(3)}
 																	{e.rankHashrate > 0 && getRankBadge(e.rankHashrate, 'hashrate')}
 																</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{e.avgAsicTemp.toFixed(1)}
+																	{(e.avgAsicTemp ?? 0).toFixed(1)}
 																	{e.rankAsicTemp > 0 && getRankBadge(e.rankAsicTemp, 'asic')}
 																</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{e.avgVrTemp.toFixed(1)}
+																	{(e.avgVrTemp ?? 0).toFixed(1)}
 																	{e.rankVrTemp > 0 && getRankBadge(e.rankVrTemp, 'vr')}
 																</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{e.avgPower.toFixed(1)}
+																	{(e.avgPower ?? 0).toFixed(1)}
 																	{e.rankPower > 0 && getRankBadge(e.rankPower, 'power')}
 																</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{e.efficiency.toFixed(2)}
+																	{(e.efficiency ?? 0).toFixed(2)}
 																	{e.rankEfficiency > 0 && getRankBadge(e.rankEfficiency, 'efficiency')}
 																</td>
 															</tr>
@@ -1077,26 +1077,30 @@ export default function Dashboard() {
 											<div className="overflow-x-auto">
 												<table className="w-full text-xs bg-white dark:bg-gray-800">
 													<thead>
-														<tr className="border-b dark:border-gray-600">
-															<th className="text-right p-1 dark:text-white w-1/6">Step</th>
-															<th className="text-right p-1 dark:text-white w-1/6">Frequency (MHz)</th>
-															<th className="text-right p-1 dark:text-white w-1/6">Core Voltage (mV)</th>
-															<th className="text-right p-1 dark:text-white w-1/6">toExpected (%)</th>
-															<th className="text-right p-1 dark:text-white w-1/6">Hashrate (GH/s)</th>
-															<th className="text-right p-1 dark:text-white w-1/6">Last Changed</th>
-														</tr>
+													<tr className="border-b dark:border-gray-600">
+														<th className="text-right p-1 dark:text-white w-auto">Step</th>
+														<th className="text-right p-1 dark:text-white w-auto">Frequency (MHz)</th>
+														<th className="text-right p-1 dark:text-white w-auto">Core Voltage (mV)</th>
+														<th className="text-right p-1 dark:text-white w-auto">toExpected (%)</th>
+														<th className="text-right p-1 dark:text-white w-auto">Hashrate (GH/s)</th>
+														<th className="text-right p-1 dark:text-white w-auto">ASIC Temp (°C)</th>
+														<th className="text-right p-1 dark:text-white w-auto">VR Temp (°C)</th>
+														<th className="text-right p-1 dark:text-white w-auto">Last Changed</th>
+													</tr>
 													</thead>
 													<tbody>
 														{voltages.map((v, i) => {
-															const step = Math.round((v.frequency - settingsForm.maxFreq) / 6.25);
+															const step = Math.round(((v.frequency ?? 0) - settingsForm.maxFreq) / 6.25);
 															return (
 															<tr key={i} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-																<td className="p-1 text-right dark:text-white w-1/6">{step}</td>
-																<td className="p-1 text-right dark:text-white w-1/6">{v.frequency.toFixed(3)}</td>
-																<td className="p-1 text-right dark:text-white w-1/6">{v.coreVoltage.toFixed(1)}</td>
-																<td className={`p-1 text-right w-1/6 ${getToExpectedColor(v.toExpected)}`}>{v.toExpected.toFixed(2)}</td>
-																<td className="p-1 text-right dark:text-white w-1/6">{(v.avgHashRate / 1000).toFixed(3)}</td>
-																<td className="p-1 text-right dark:text-white w-1/6">{v.lastUpdate ? formatTimeAgo(v.lastUpdate) : '-'}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{step}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{(v.frequency ?? 0).toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{(v.coreVoltage ?? 0).toFixed(1)}</td>
+																<td className={`p-1 text-right w-auto ${getToExpectedColor(v.toExpected ?? 0)}`}>{(v.toExpected ?? 0).toFixed(2)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{((v.avgHashRate ?? 0) / 1000).toFixed(3)}</td>
+																<td className={`p-1 text-right w-auto ${getTempColor(v.avgAsicTemp ?? 0, settingsForm.targetAsic)}`}>{(v.avgAsicTemp ?? 0).toFixed(1)}</td>
+																<td className={`p-1 text-right w-auto ${getTempColor(v.avgVrTemp ?? 0, settingsForm.maxVr)}`}>{(v.avgVrTemp ?? 0).toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{v.lastUpdate ? formatTimeAgo(v.lastUpdate) : '-'}</td>
 															</tr>
 														);})}
 													</tbody>

@@ -137,6 +137,8 @@ There are other environment variables that can be set in your `docker-compose.ym
 | ASIC_TEMP_TOLERANCE | ASIC temp tolerance (±°C) | Default: ±0.25°C - Step value will change when Asic temp is above or below TARGET_ASIC ± ASIC_TEMP_TOLERANCE |
 | CORE_VOLTAGE | Core voltage (mV) | Normally inherits current bitaxe setting (else 1150) |
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
+| MAX_COREVOLTAGE | Max core voltage for autotune (mV) | 1450 |
+| AUTOTUNE_COREVOLTAGE | Enable autotune voltage optimization | true |
 | PORT | Server port | 3000 |
 | HISTORY_LIMIT | Max history entries | 172800 (2 days worth of data) |
 | STEP_DOWN_DEFAULT | Default Stepdown value | Default 10: frequency will automatically be stepped down on starting server |

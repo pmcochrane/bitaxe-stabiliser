@@ -82,6 +82,8 @@ export interface VoltageEntry {
 	coreVoltage: number;
 	toExpected: number;
 	avgHashRate: number;
+	avgAsicTemp: number;
+	avgVrTemp: number;
 	lastUpdate: string;
 }
 

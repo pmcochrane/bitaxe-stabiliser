@@ -24,7 +24,7 @@ export class MonitorService {
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
-	private stepUpEveryXPasses = 3; // actually 4
+	private stepUpEveryXPasses = 6; // actually 7
 	private stepDownEveryXPasses = 2; // actually 3
 	private stabilisedCounterDefault = 15;
 	private drasticMeasureDelay = 3;
@@ -438,7 +438,7 @@ export class MonitorService {
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Flip-flop detected! Selected best ${currentVoltage}mV`);
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
@@ -460,7 +460,7 @@ export class MonitorService {
 			} else {
 				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached, using best: ${currentVoltage}mV`);
 				this.bestToExpected = -Infinity;
@@ -478,7 +478,7 @@ export class MonitorService {
 		} else {
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate);
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Optimal found, using best: ${currentVoltage}mV`);
 			this.bestToExpected = -Infinity;
