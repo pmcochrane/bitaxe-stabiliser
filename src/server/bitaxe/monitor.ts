@@ -451,7 +451,7 @@ export class MonitorService {
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Flip-flop detected! Selected best ${currentVoltage}mV`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Flip-flop detected! Selected best ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
 			this.bestToExpected = -Infinity;
@@ -468,13 +468,13 @@ export class MonitorService {
 				this.applyChange = true;
 				this.stableLoopCount = 0;
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Increasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			} else {
 				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached, using best: ${currentVoltage}mV`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached, using best: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 				this.stableLoopCount = 0;
@@ -486,13 +486,13 @@ export class MonitorService {
 			this.applyChange = true;
 			this.stableLoopCount = 0;
 			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${toExpected.toFixed(2)}%		Decreasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 		} else {
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Optimal found, using best: ${currentVoltage}mV`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Optimal found, using best: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
 			this.stableLoopCount = 0;
@@ -637,7 +637,7 @@ export class MonitorService {
 							}
 						}
 					} else {
-						logMonitor(`[Stabilise] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
+						// logMonitor(`[Stabilise] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
 						this.state.stepUpCounter = this.stepUpEveryXPasses;
 					}
 				}
