@@ -76,6 +76,14 @@ export interface HistoryEntry {
 	coreVoltage2: number;
 }
 
+export interface VoltageEntry {
+	frequency: number;
+	coreVoltage: number;
+	toExpected: number;
+	avgHashRate: number;
+	lastUpdate: string;
+}
+
 export interface HashrangeEntry {
 	frequency: number;
 	coreVoltage: number;

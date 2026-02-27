@@ -32,6 +32,8 @@ const STEP_DOWN_DEFAULT = process.env.STEP_DOWN_DEFAULT ? parseInt(process.env.S
 const LOW_STEP_ANALYSE_RANGE = process.env.LOW_STEP_ANALYSE_RANGE ? parseInt(process.env.LOW_STEP_ANALYSE_RANGE) : undefined;
 const LOW_STEP_WARNING_THRESHOLD = process.env.LOW_STEP_WARNING_THRESHOLD ? parseInt(process.env.LOW_STEP_WARNING_THRESHOLD) : undefined;
 const ASIC_TEMP_TOLERANCE = process.env.ASIC_TEMP_TOLERANCE ? parseFloat(process.env.ASIC_TEMP_TOLERANCE) : undefined;
+const AUTOTUNE_COREVOLTAGE = process.env.AUTOTUNE_COREVOLTAGE ? process.env.AUTOTUNE_COREVOLTAGE !== 'false' : true;
+const MAX_COREVOLTAGE = process.env.MAX_COREVOLTAGE ? parseInt(process.env.MAX_COREVOLTAGE) : 1400;
 
 async function getDataDir(): Promise<string> {
 	let retval=`./deviceData/${BITAXE_IP}`;
@@ -63,6 +65,7 @@ getDataDir().then((dataDir) => {
 		`${dataDir}/history.json`,
 		`${dataDir}/hashrange.json`,
 		`${dataDir}/events.json`,
+		`${dataDir}/voltages.json`,
 		HISTORY_LIMIT
 	);
 
@@ -193,7 +196,15 @@ async function initializeSettings() {
 
 async function main() {
 	const settings = await initializeSettings();
-	const monitor = new MonitorService(settings, store);
+	const voltages = store.getVoltages();
+	logIndex(`Autotune core voltage: ${AUTOTUNE_COREVOLTAGE ? 'enabled' : 'disabled'}`);
+	logIndex(`Max core voltage: ${MAX_COREVOLTAGE}mV`);
+	logIndex(`Loaded ${voltages.length} voltage entries from voltages.json`);
+	const monitor = new MonitorService(settings, store, {
+		autotuneEnabled: AUTOTUNE_COREVOLTAGE,
+		maxCoreVoltage: MAX_COREVOLTAGE,
+		voltageMap: voltages,
+	});
 
 	const app = express();
 	app.use(compression());

@@ -3,8 +3,6 @@
 - **Server**: Add call to monitor to pull room temp from an api and plot on graph
 - **Server**: Write some notification method to alert remotely
 
-- **Monitor**: Revise when the core voltage steps up or down depending upon step level. Perhaps it should autotune based on the toExpected value after the step value has been stable and reassess every 15(?) loops (~30 secs). Would have to limit the changes to +=20mv I think. The API would probably need to make the applied adjustment available to the dashboard.
-
 - **Monitor**: Autotune the corevoltage +=20mv maximum for each frequency setting after the step value has been stable and reassess every 15(?) loops (~30 secs). The aim would be to get a core voltage that provides a toexpected value of 0% or more for each frequency. When a suitable corevoltage is detected, record the data for core voltage / frequency in a file voltages.json in the data directory and store it in a variable for use by the monitor when it needs to adjust the step frequency. If toExpected is <0 increase the corevoltage by 5mv. if toExpected>1 then decrease coreVOltage by 5mv. voltages.json would need loaded at server startup. If there is no values present in the voltages.json for a frequency then it should continue with the currently applied core voltage.
 
 to the current existing voltageOffset calculation as a starting point based upon step level. Once sweep mode has ran it should obtain more accurate values.

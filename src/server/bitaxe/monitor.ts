@@ -412,7 +412,7 @@ export class MonitorService {
 		}
 
 		if (toExpected < 0) {
-			const maxVoltage = baseline + 20;
+			const maxVoltage = baseline + 30;
 			if (currentVoltage < maxVoltage && currentVoltage < this.maxCoreVoltage) {
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;

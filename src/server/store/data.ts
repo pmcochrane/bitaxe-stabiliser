@@ -1,12 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { HistoryEntry, Settings, HashrangeEntry } from '../bitaxe/types';
+import { HistoryEntry, Settings, HashrangeEntry, VoltageEntry } from '../bitaxe/types';
 
 interface StoreData {
 	settings: Settings;
 	history: HistoryEntry[];
 	hashrange: HashrangeEntry[];
 	events: StoreEvent[];
+	voltages: VoltageEntry[];
 }
 
 interface StoreEvent {
@@ -21,6 +22,7 @@ export class DataStore {
 	private hashrangeFile: string;
 	private eventsFile: string;
 	private settingsFile: string;
+	private voltagesFile: string;
 	private maxHistoryEntries: number;
 
 	constructor(
@@ -28,12 +30,14 @@ export class DataStore {
 		historyFile: string,
 		hashrangeFile: string,
 		eventsFile: string,
+		voltagesFile: string,
 		maxHistoryEntries: number = 172800
 	) {
 		this.settingsFile = settingsFile;
 		this.historyFile = historyFile;
 		this.hashrangeFile = hashrangeFile;
 		this.eventsFile = eventsFile;
+		this.voltagesFile = voltagesFile;
 		this.maxHistoryEntries = maxHistoryEntries;
 
 		this.data = {
@@ -41,6 +45,7 @@ export class DataStore {
 			history: this.loadHistory(),
 			hashrange: this.loadHashrange(),
 			events: this.loadEvents(),
+			voltages: this.loadVoltages(),
 		};
 
 		this.pruneHistory();
@@ -102,6 +107,18 @@ export class DataStore {
 			}
 		} catch (error) {
 			console.error('Failed to load events:', error);
+		}
+		return [];
+	}
+
+	private loadVoltages(): VoltageEntry[] {
+		try {
+			if (fs.existsSync(this.voltagesFile)) {
+				const content = fs.readFileSync(this.voltagesFile, 'utf-8');
+				return JSON.parse(content);
+			}
+		} catch (error) {
+			console.error('Failed to load voltages:', error);
 		}
 		return [];
 	}
@@ -273,8 +290,54 @@ export class DataStore {
 		}
 	}
 
+	getVoltages(): VoltageEntry[] {
+		return [...this.data.voltages];
+	}
+
+	getVoltageForFrequency(frequency: number): VoltageEntry | undefined {
+		return this.data.voltages.find(e => Math.abs(e.frequency - frequency) < 1);
+	}
+
+	setVoltageForFrequency(frequency: number, coreVoltage: number, toExpected: number = 0, avgHashRate: number = 0): void {
+		const existingIndex = this.data.voltages.findIndex(e => Math.abs(e.frequency - frequency) < 1);
+		const entry: VoltageEntry = {
+			frequency,
+			coreVoltage,
+			toExpected,
+			avgHashRate,
+			lastUpdate: new Date().toISOString(),
+		};
+
+		if (existingIndex >= 0) {
+			this.data.voltages[existingIndex] = entry;
+		} else {
+			this.data.voltages.push(entry);
+		}
+
+		this.data.voltages.sort((a, b) => a.frequency - b.frequency);
+		this.saveVoltagesDebounced();
+	}
+
+	private saveVoltagesTimeout: NodeJS.Timeout | null = null;
+
+	private saveVoltagesDebounced(): void {
+		if (this.saveVoltagesTimeout) {
+			clearTimeout(this.saveVoltagesTimeout);
+		}
+		this.saveVoltagesTimeout = setTimeout(() => this.saveVoltages(), 1000);
+	}
+
+	saveVoltages(): void {
+		try {
+			fs.writeFileSync(this.voltagesFile, JSON.stringify(this.data.voltages, null, 2));
+		} catch (error) {
+			console.error('Failed to save voltages:', error);
+		}
+	}
+
 	forceSave(): void {
 		this.saveHistory();
 		this.saveHashrange();
+		this.saveVoltages();
 	}
 }

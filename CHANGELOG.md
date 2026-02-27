@@ -6,9 +6,11 @@
 
 - **Dashboard**: Step graph is now a filled line chart instead of a bar chart.
 - **Dashboard**: Added another line to graph corresponding to the max VR temp.
+- **Dashboard**: Added another line to graph corresponding to the target ASIC temp.
 - **Dashboard**: Remove repetitive duplicates from graph plots where the VR Temp, ASIC temp and step is the same for sucessive timestamps. First timestamp will be preserved in the data. Hash rate is not compared
 - **Dashboard**: An alert will show if the bitaxe hashrate falls off and drops to 25% below the median hash rate value.
 
+- **Monitor**: Added autotune logic to try and make sure the coreVoltage is approriate to achieve the expected hash rate at a particular frequency. The coreVoltage specified in the settings is used as a guide and over time, each step level (frequency) will adjust the core voltage + or - 30mv to that value. The last good value is persistent so when you revisit that frequency it loads the last best core voltage found at that frequency.
 - **Monitor**: Make the temp control range configurable via an environment variable. This should be a low value floating point and defaults to 0.25. Larger values may prevent the temperatures from stabilising.
 
 - **Navbar**: Show the version number in a badge.
