@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAnalysis, HashrangeAnalysis } from '../services/api';
+import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAnalysis, getVoltages, HashrangeAnalysis } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry } from '../../both/types';
-import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine } from 'recharts';
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine, LineChart } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
 import { AnimatedBanner } from '../components/AnimatedBanner';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
 import { logUi } from '../utils/logger';
-import { Trash2, Play, Square, BarChart3, RefreshCw } from 'lucide-react';
+import { Trash2, Play, Square, BarChart3, RefreshCw, Gauge } from 'lucide-react';
 
 interface GraphDataEntry {
 	t: number;
@@ -942,7 +942,7 @@ export default function Dashboard() {
 							<button
 								onClick={handleToggleSweep}
 								disabled={dataUnavailable}
-								className="flex items-center justify-center gap-2 flex-1 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
 							>
 								{status?.sweepMode ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
 								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
@@ -1006,7 +1006,7 @@ export default function Dashboard() {
 													</thead>
 													<tbody>
 														{analysis.allData.map((e, i) => (
-															<tr key={i} className={`border-b dark:border-gray-600 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
+															<tr key={i} className={`border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
 																<td className="p-1 dark:text-white">
 																	{e.frequency.toFixed(3)}
 																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
@@ -1044,11 +1044,52 @@ export default function Dashboard() {
 									);
 									await showAnalysis('Hashrange Analysis Results', content);
 								}}
-								className="flex items-center justify-center gap-2 flex-1 px-4 py-2 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex items-center justify-center gap-1 flex-1 px-2 py-1 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
 								disabled={dataUnavailable}
 							>
 								<BarChart3 className="w-4 h-4" />
 								Analyse Hashrange
+							</button>
+							<button
+								onClick={async () => {
+									const voltages = await getVoltages();
+									if (voltages.length === 0) {
+										await showAlert('Voltages', 'No voltage data available.');
+										return;
+									}
+									const content = (
+										<div>
+											<div className="overflow-x-auto">
+												<table className="w-full text-xs bg-white dark:bg-gray-800">
+													<thead>
+														<tr className="border-b dark:border-gray-600">
+															<th className="text-right p-1 dark:text-white w-1/4">Frequency (MHz)</th>
+															<th className="text-right p-1 dark:text-white w-1/4">Core Voltage (mV)</th>
+															<th className="text-right p-1 dark:text-white w-1/4">toExpected (%)</th>
+															<th className="text-right p-1 dark:text-white w-1/4">Hashrate (GH/s)</th>
+														</tr>
+													</thead>
+													<tbody>
+														{voltages.map((v, i) => (
+															<tr key={i} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+																<td className="p-1 text-right dark:text-white w-1/4">{v.frequency.toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-1/4">{v.coreVoltage.toFixed(1)}</td>
+																<td className={`p-1 text-right w-1/4 ${getToExpectedColor(v.toExpected)}`}>{v.toExpected.toFixed(2)}</td>
+																<td className="p-1 text-right dark:text-white w-1/4">{(v.avgHashRate / 1000).toFixed(3)}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											</div>
+										</div>
+									);
+									await showAnalysis('Voltage Data', content);
+								}}
+								className="flex items-center justify-center gap-1 px-2 py-1 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+								disabled={dataUnavailable}
+							>
+								<Gauge className="w-4 h-4" />
+								Voltages
 							</button>
 						</div>
 					</div>

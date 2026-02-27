@@ -249,6 +249,11 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		res.json(result);
 	});
 
+	router.get('/voltages', (req: Request, res: Response) => {
+		const voltages = store.getVoltages();
+		res.json(voltages);
+	});
+
 	router.get('/ping', (req: Request, res: Response) => {
 		monitor.getClient().isReachable().then((reachable) => {
 			res.json({ reachable });

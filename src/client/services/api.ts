@@ -79,4 +79,17 @@ export async function getHashrangeAnalysis(): Promise<HashrangeAnalysis> {
 	return data;
 }
 
+export interface VoltageEntry {
+	frequency: number;
+	coreVoltage: number;
+	toExpected: number;
+	avgHashRate: number;
+	lastUpdate: string;
+}
+
+export async function getVoltages(): Promise<VoltageEntry[]> {
+	const { data } = await api.get<VoltageEntry[]>('/voltages');
+	return data;
+}
+
 export default api;
