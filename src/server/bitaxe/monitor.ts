@@ -626,6 +626,23 @@ export class MonitorService {
 		}
 
 		if (this.state.sweepMode) {
+			const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
+			const fmaxVr = this.settings.maxVr;
+
+			if (status.avgVrTemp > fmaxVr || status.avgAsicTemp > fmaxAsic) {
+				const baseline = this.baselineVoltages.get(this.desiredFreq) ?? this.settings.coreVoltage;
+				const currentVoltage = this.currentTunedVoltage ?? this.voltageMap.get(this.desiredFreq) ?? baseline;
+				const throttleVoltage = Math.max(700, currentVoltage - 5);
+				this.currentTunedVoltage = throttleVoltage;
+				this.voltageMap.set(this.desiredFreq, throttleVoltage);
+				this.applyChange = true;
+				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
+				this.stableLoopCount = 0;
+				this.bestToExpected = -Infinity;
+				this.bestVoltage = 0;
+				logMonitor(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);
+			}
+
 			this.sweepIterationsCounter++;
 			if (this.sweepIterationsCounter === 1 || this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
 				logMonitor(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Step ${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz - To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${(this.overallAverageHashRate / 1e6).toFixed(2)} MH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/MH`);
