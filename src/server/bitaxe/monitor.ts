@@ -30,6 +30,9 @@ export class MonitorService {
 	private drasticMeasureDelay = 3;
 
 	private maxSweepSteps = 24;
+	private getMinStepDown(): number {
+		return Math.floor((this.settings.maxFreq - 400) / 6.25) * -1;
+	}
 	private sweepIterations = 50; //150;
 	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
@@ -155,8 +158,14 @@ export class MonitorService {
 	adjustFrequency(delta: number): void {
 		const oldStepDown = this.state.stepDown;
 		this.state.stepDown += delta;
+		if (this.state.stepDown > this.maxStepUp) {
+			this.state.stepDown = this.maxStepUp;
+		}
+		if (this.state.stepDown < this.getMinStepDown()) {
+			this.state.stepDown = this.getMinStepDown();
+		}
 		this.applyChange = true;
-		this.changeMessage=`Stepdown adjusted: ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Manual] Step adjusted: ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'control',
 			message: `Stepdown adjusted by ${delta}: ${this.changeMessage}`,
@@ -183,7 +192,7 @@ export class MonitorService {
 		this.sweepIterationsCounter = 0;
 		this.sweepStartTime = new Date().toISOString();
 		this.store.clearHashrange();
-		this.changeMessage=`Sweep started: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] started: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: '${this.changeMessage}',
@@ -197,7 +206,7 @@ export class MonitorService {
 		this.state.stepDown = 0;
 		this.autoAdjustFreq = true;
 		this.applyChange = true;
-		this.changeMessage=`Sweep stopped: stepDown ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] stopped: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: '${this.changeMessage}',
@@ -492,7 +501,8 @@ export class MonitorService {
 			return;
 		}
 
-		logMonitor(`[${this.iteration}] [BITAXE]  ${this.changeMessage!=="" ? ' '+this.changeMessage : ''} [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]		Applying: Voltage=${adjustedVoltage}mV (offset: ${voltageOffset}mV) `);
+		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage!=="" ? ' '+this.changeMessage : ''} 		Applying: Voltage=${adjustedVoltage}mV (offset: ${voltageOffset}mV) `);
+		this.changeMessage='';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
 		this.appliedCoreVoltage = adjustedVoltage;
@@ -521,6 +531,9 @@ export class MonitorService {
 			if (status.temp > emergencyOverheat) {
 				const oldStepDown = this.state.stepDown;
 				this.state.stepDown--;
+				if (this.state.stepDown < this.getMinStepDown()) {
+					this.state.stepDown = this.getMinStepDown();
+				}
 				this.changeMessage=`[Stabilise] Emergency cooling:	${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C	Step Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 			}
@@ -532,6 +545,9 @@ export class MonitorService {
 			if (this.state.stepDownCounter < 0) {
 				const oldStepDown = this.state.stepDown;
 				this.state.stepDown--;
+				if (this.state.stepDown < this.getMinStepDown()) {
+					this.state.stepDown = this.getMinStepDown();
+				}
 				this.changeMessage=`[Stabilise] VR temp high:	${status.avgVrTemp.toFixed(1)}°C		Step Down ${oldStepDown} -> ${this.state.stepDown} `;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
@@ -542,6 +558,9 @@ export class MonitorService {
 				if (this.state.drasticMeasureCounter >= this.drasticMeasureDelay) {
 					const oldStepDown = this.state.stepDown;
 					this.state.stepDown -= 10;
+					if (this.state.stepDown < this.getMinStepDown()) {
+						this.state.stepDown = this.getMinStepDown();
+					}
 					this.changeMessage = `[Stabilise] ASIC temp Critical:	${status.avgAsicTemp.toFixed(1)}°C	Drastic measures ${oldStepDown} -> ${this.state.stepDown} `;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
@@ -554,6 +573,9 @@ export class MonitorService {
 				if (this.state.stepDownCounter < 0) {
 					const oldStepDown = this.state.stepDown;
 					this.state.stepDown--;
+					if (this.state.stepDown < this.getMinStepDown()) {
+						this.state.stepDown = this.getMinStepDown();
+					}
 					this.changeMessage=`[Stabilise] ASIC temp high:	${status.avgAsicTemp.toFixed(1)}°C	Step Down ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 				}
