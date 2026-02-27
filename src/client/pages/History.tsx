@@ -154,7 +154,7 @@ export default function History() {
 			h.voltage,
 			h.power,
 			h.frequency,
-			h.efficiency.toFixed(2),
+			h.efficiency.toFixed(1),
 			h.toExpected.toFixed(1),
 		]);
 		const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
@@ -286,11 +286,11 @@ export default function History() {
 										<td className={`p-2 text-right ${getToExpectedColor(h.toExpected)}`}>{h.toExpected.toFixed(1)}%</td>
 										<td className={`p-2 text-right ${getTempColor(h.temp, settings.targetAsic)}`}>{h.temp.toFixed(3)}</td>
 										<td className={`p-2 text-right ${getTempColor(h.vrTemp, settings.maxVr)}`}>{h.vrTemp}</td>
-										<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage.toFixed(1)}</td>
+										<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage}</td>
 										<td className={`p-2 text-right ${prev && prev.frequency !== h.frequency ? 'bg-purple-100 dark:bg-purple-800 font-bold' : 'dark:text-white'}`}>{h.frequency}</td>
 										<td className={`p-2 text-right ${prev && prev.oldStepDown !== h.oldStepDown ? 'bg-yellow-100 dark:bg-yellow-800 font-bold' : 'dark:text-white'}`}>{h.oldStepDown}</td>
 										<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
-										<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(2)}</td>
+										<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(1)}</td>
 									</tr>
 									);
 								})

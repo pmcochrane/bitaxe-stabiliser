@@ -764,11 +764,11 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400" title={`Step: ${current.stepDown} • Offset: ${Math.floor(Math.abs(current.stepDown) / 5) * -5} mV from base ${settingsForm.coreVoltage} mV`}>Core Voltage</div>
-									<div className="text-xl font-bold dark:text-white">{current.coreVoltage.toFixed(1)} mV</div>
+									<div className="text-xl font-bold dark:text-white">{current.coreVoltage} mV</div>
 									<div className={`text-sm ${current.coreVoltage < settingsForm.coreVoltage ? 'text-amber-600 dark:text-amber-400' : current.coreVoltage > settingsForm.coreVoltage ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
-											title={`Step at ${current.stepDown} forces an offset of ${Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)}mV from base ${settingsForm.coreVoltage}mV`}>
+											title={`Step at ${current.stepDown} forces an offset of ${Math.abs(current.coreVoltage - settingsForm.coreVoltage)}mV from base ${settingsForm.coreVoltage}mV`}>
 										{current.coreVoltage > settingsForm.coreVoltage ? '↑ +' : current.coreVoltage < settingsForm.coreVoltage ? '↓ -' : ''}
-											{Math.abs(current.coreVoltage - settingsForm.coreVoltage).toFixed(1)} mV
+											{Math.abs(current.coreVoltage - settingsForm.coreVoltage)} mV
 									</div>
 									{status?.settings.maxCoreVoltage && (
 										<div className="text-xs text-gray-400 dark:text-gray-500">Max: {status.settings.maxCoreVoltage} mV</div>
@@ -776,7 +776,7 @@ export default function Dashboard() {
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">Efficiency</div>
-									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(2)} J/TH</div>
+									<div className="text-xl font-bold dark:text-white">{current.efficiency.toFixed(1)} J/TH</div>
 								</div>
 							</div>
 						) : apiError ? (
@@ -1026,7 +1026,7 @@ export default function Dashboard() {
 																	{(e.frequency ?? 0).toFixed(3)}
 																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
 																</td>
-																<td className="p-1 text-right dark:text-white">{(e.coreVoltage ?? 0).toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white">{e.coreVoltage ?? 0}</td>
 																<td className="p-1 text-right dark:text-white relative">
 																	{((e.avgHashRate ?? 0)/1000).toFixed(3)}
 																	{e.rankHashrate > 0 && getRankBadge(e.rankHashrate, 'hashrate')}
@@ -1044,7 +1044,7 @@ export default function Dashboard() {
 																	{e.rankPower > 0 && getRankBadge(e.rankPower, 'power')}
 																</td>
 																<td className="p-1 text-right dark:text-white relative">
-																	{(e.efficiency ?? 0).toFixed(2)}
+																	{(e.efficiency ?? 0).toFixed(1)}
 																	{e.rankEfficiency > 0 && getRankBadge(e.rankEfficiency, 'efficiency')}
 																</td>
 															</tr>
@@ -1095,7 +1095,7 @@ export default function Dashboard() {
 															<tr key={i} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
 																<td className="p-1 text-right dark:text-white w-auto">{step}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{(v.frequency ?? 0).toFixed(3)}</td>
-																<td className="p-1 text-right dark:text-white w-auto">{(v.coreVoltage ?? 0).toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{v.coreVoltage ?? 0}</td>
 																<td className={`p-1 text-right w-auto ${getToExpectedColor(v.toExpected ?? 0)}`}>{(v.toExpected ?? 0).toFixed(2)}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{((v.avgHashRate ?? 0) / 1000).toFixed(3)}</td>
 																<td className={`p-1 text-right w-auto ${getTempColor(v.avgAsicTemp ?? 0, settingsForm.targetAsic)}`}>{(v.avgAsicTemp ?? 0).toFixed(1)}</td>
@@ -1266,11 +1266,11 @@ export default function Dashboard() {
 												<td className={`p-2 text-right ${getToExpectedColor(h.toExpected)}`}>{h.toExpected.toFixed(1)}%</td>
 												<td className={`p-2 text-right ${getTempColor(h.temp, settingsForm.targetAsic)}`}>{h.temp.toFixed(3)}</td>
 												<td className={`p-2 text-right ${getTempColor(h.vrTemp, settingsForm.maxVr)}`}>{h.vrTemp}</td>
-												<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage.toFixed(1)}</td>
+												<td className={`p-2 text-right ${prev && prev.coreVoltage !== h.coreVoltage ? 'bg-blue-100 dark:bg-blue-800 font-bold' : 'dark:text-white'}`}>{h.coreVoltage}</td>
 												<td className={`p-2 text-right ${prev && prev.frequency !== h.frequency ? 'bg-purple-100 dark:bg-purple-800 font-bold' : 'dark:text-white'}`}>{h.frequency}</td>
 												<td className={`p-2 text-right ${prev && prev.oldStepDown !== h.oldStepDown ? 'bg-yellow-100 dark:bg-yellow-800 font-bold' : 'dark:text-white'}`}>{h.oldStepDown}</td>
 												<td className="p-2 text-right dark:text-white">{h.power.toFixed(1)}</td>
-												<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(2)}</td>
+												<td className="p-2 text-right dark:text-white">{h.efficiency.toFixed(1)}</td>
 											</tr>
 										);
 									})
