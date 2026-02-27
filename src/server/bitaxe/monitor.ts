@@ -24,8 +24,8 @@ export class MonitorService {
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
-	private stepUpEveryXPasses = 12; // actually 13
-	private stepDownEveryXPasses = 2; // actually 3
+	private stepUpEveryXPasses = 30;
+	private stepDownEveryXPasses = 2;
 	private stabilisedCounterDefault = 15;
 	private drasticMeasureDelay = 3;
 
@@ -500,7 +500,7 @@ export class MonitorService {
 			this.currentTunedVoltage = currentVoltage;
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Optimal found, using best: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Passable voltage found: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
 			this.stableLoopCount = 0;
