@@ -462,6 +462,9 @@ export class MonitorService {
 
 		if (toExpected < 0) {
 			if (currentVoltage < this.maxCoreVoltage) {
+				if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
+					this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+				}
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
@@ -474,12 +477,15 @@ export class MonitorService {
 				this.currentTunedVoltage = currentVoltage;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached, using best: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz]	toExpected=${this.bestToExpected.toFixed(2)}%		Max voltage reached (no change): ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 				this.stableLoopCount = 0;
 			}
 		} else if (currentVoltage > 700 && toExpected > 1) {
+			if (!this.store.getVoltageForFrequency(this.desiredFreq)) {
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+			}
 			currentVoltage -= 5;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
