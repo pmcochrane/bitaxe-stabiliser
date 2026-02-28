@@ -468,7 +468,7 @@ export class MonitorService {
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%				Flip-flop detected! Selected best ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}% Flip-flop detected! Selected best ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.changeMessage=`						`;
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
@@ -479,7 +479,7 @@ export class MonitorService {
 
 		if (toExpected < 0) {
 			if (this.state.autotuneSettleCounter > 0) {
-				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune ] toExpected: ${toExpected.toFixed(2)}%				Skipping voltage increase - settling after step change`);
+				logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune ] toExpected: ${toExpected.toFixed(2)}%					Skipping voltage increase - settling after step change`);
 				this.changeMessage = `						`;
 			} else if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
 				const oldStepDown = this.state.stepDown;
@@ -519,7 +519,7 @@ export class MonitorService {
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.applyChange = true;
 			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune-] toExpected: ${toExpected.toFixed(2)}%						Decreasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune-] toExpected: ${toExpected.toFixed(2)}%					Decreasing voltage to ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 				this.changeMessage=`						`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 		} else {
@@ -527,7 +527,7 @@ export class MonitorService {
 			this.currentTunedVoltage = currentVoltage;
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%							No voltage change: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
+			logMonitor(`[${this.iteration}] [Autotune] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%					No voltage change: ${currentVoltage}mV (ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C)`);
 			this.changeMessage=`						`;
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
