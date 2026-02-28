@@ -632,10 +632,8 @@ export class MonitorService {
 				}
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
-				if (this.state.autotuneSettleCounter > 0) {
-					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
-				}
+				this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
+				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				this.changeMessage=`[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
