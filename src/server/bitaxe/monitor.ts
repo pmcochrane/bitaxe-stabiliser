@@ -406,7 +406,7 @@ export class MonitorService {
 		const clampedVoltage = Math.max(700, newVoltage);
 		this.voltageMap.set(frequency, clampedVoltage);
 		this.store.setVoltageForFrequency(frequency, clampedVoltage, 0, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-		logMonitor(`[${this.iteration}] [Stabilise] Reducing voltage for ${frequency.toFixed(2)}MHz by ${this.voltageOverheatReduction}mV to ${clampedVoltage}mV due to quick overheating after step change`);
+		logMonitor(`[${this.iteration}] [Autotune-] Reducing voltage for ${frequency.toFixed(2)}MHz by ${this.voltageOverheatReduction}mV to ${clampedVoltage}mV due to quick overheating after step change`);
 		return true;
 	}
 
@@ -600,7 +600,7 @@ export class MonitorService {
 				if (this.state.stepDown < this.getMinStepDown()) {
 					this.state.stepDown = this.getMinStepDown();
 				}
-				this.changeMessage=`[Stabilise] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`[EMERGENCY] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 			}
 			return;
@@ -620,7 +620,7 @@ export class MonitorService {
 					this.reduceStoredVoltage(this.desiredFreq);
 					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				}
-				this.changeMessage=`[Stabilise] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -647,7 +647,7 @@ export class MonitorService {
 						this.reduceStoredVoltage(this.desiredFreq);
 						this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 					}
-					this.changeMessage = `[Stabilise] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage = `[Drastic  ] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
 					this.state.stepDownSettleCounter = this.stepDownSettleDelay;
@@ -670,7 +670,7 @@ export class MonitorService {
 						this.reduceStoredVoltage(this.desiredFreq);
 						this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 					}
-					this.changeMessage=`[Stabilise] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage=`[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.stepDownSettleCounter = this.stepDownSettleDelay;
 					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
@@ -689,7 +689,7 @@ export class MonitorService {
 							if (this.state.stepDown > this.maxStepUp) {
 								this.state.stepDown = this.maxStepUp;
 							} else {
-								this.changeMessage=`[Stabilise] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown} -> ${this.state.stepDown}`;
+								this.changeMessage=`[Step Up  ]ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown} -> ${this.state.stepDown}`;
 								this.applyChange = true;
 								this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 							}
