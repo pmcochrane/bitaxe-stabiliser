@@ -12,6 +12,7 @@
     "start": "node dist/server/index.js",
     "dev": "concurrently \"NODE_ENV=development ts-node src/server/index.ts\" \"vite --port 5173\"",
     "dev:all": "ts-node src/server/index.ts",
+    "typecheck": "tsc --noEmit",
     "release": "echo 'Usage: npm run release -- minor|major|patch' && exit 1",
     "release:patch": "npm version patch && npm run docker:build && npm run docker:push && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
     "release:minor": "npm version minor && npm run docker:build && npm run docker:push && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
