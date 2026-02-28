@@ -1023,7 +1023,7 @@ export default function Dashboard() {
 														{analysis.allData.map((e, i) => (
 															<tr key={i} className={`border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
 																<td className="p-1 dark:text-white">
-																	{(e.frequency ?? 0).toFixed(3)}
+																	{(e.frequency ?? 0).toFixed(2)}
 																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
 																</td>
 																<td className="p-1 text-right dark:text-white">{e.coreVoltage ?? 0}</td>
@@ -1094,7 +1094,7 @@ export default function Dashboard() {
 															return (
 															<tr key={i} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
 																<td className="p-1 text-right dark:text-white w-auto">{step}</td>
-																<td className="p-1 text-right dark:text-white w-auto">{(v.frequency ?? 0).toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{(v.frequency ?? 0).toFixed(2)}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{v.coreVoltage ?? 0}</td>
 																<td className={`p-1 text-right w-auto ${getToExpectedColor(v.toExpected ?? 0)}`}>{(v.toExpected ?? 0).toFixed(2)}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{((v.avgHashRate ?? 0) / 1000).toFixed(3)}</td>
