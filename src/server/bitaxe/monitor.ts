@@ -675,7 +675,7 @@ export class MonitorService {
 						this.state.stepDown = this.getMinStepDown();
 					}
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-					logMonitor(`[${this.iteration}] [Stabilise] [${oldStepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high (ASIC: ${status.avgAsicTemp.toFixed(1)}°C, VR: ${status.avgVrTemp.toFixed(1)}°C)`);
+					logMonitor(`[${this.iteration}] [Blocking] [${oldStepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high (ASIC: ${status.avgAsicTemp.toFixed(1)}°C, VR: ${status.avgVrTemp.toFixed(1)}°C)`);
 					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
 					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 					this.changeMessage=`[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
@@ -703,7 +703,7 @@ export class MonitorService {
 							}
 						}
 					} else {
-						// logMonitor(`[${this.iteration}] [Stabilise] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
+						// logMonitor(`[${this.iteration}] [Blocked ] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
 						this.state.stepUpCounter = this.stepUpEveryXPasses;
 					}
 				}
