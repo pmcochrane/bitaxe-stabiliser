@@ -122,4 +122,6 @@ export interface MonitorState {
 	lastFrequencyApplied: number;
 	lastCoreVoltageApplied: number;
 	drasticMeasureCounter: number;
+	stepDownSettleCounter: number;
+	autotuneSettleCounter: number;
 }
