@@ -24,7 +24,7 @@ export class MonitorService {
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
-	private stepUpEveryXPasses = 60;
+	private stepUpEveryXPasses = 90;
 	private stepDownEveryXPasses = 2;
 	private stabilisedCounterDefault = 15;
 	private drasticMeasureDelay = 3;
