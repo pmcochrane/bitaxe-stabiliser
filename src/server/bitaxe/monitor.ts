@@ -575,6 +575,10 @@ export class MonitorService {
 			return;
 		}
 
+		if (this.changeMessage.includes('[Step Up') || this.changeMessage.includes('[Step Down')) {
+			logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] -------------------------------------------------------------}`);
+		}
+
 		logMonitor(`[${this.iteration}] [BITAXE]   [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] ${this.changeMessage !== '' ? this.changeMessage : ''}\t\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`);
 		this.changeMessage='';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
