@@ -30,7 +30,7 @@ export class MonitorService {
 	private drasticMeasureDelay = 3;
 	private stepDownSettleDelay = 5;
 	private autotuneSettleDelay = 10;
-	private voltageOverheatReduction = 10;
+	private voltageOverheatReduction = 5;
 
 	private maxSweepSteps = 24;
 	private getMinStepDown(): number {
@@ -169,7 +169,7 @@ export class MonitorService {
 	}
 
 	private logMon(message: string): void {
-		logMonitor(`[${this.iteration}] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz][${this.overallAverageAsicTemp.toFixed(1)}°C | ${this.overallAverageVrTemp.toFixed(1)}°C]	${message}`);
+		logMonitor(`[${this.iteration}] [${this.state.stepDown} @ ${this.desiredFreq.toFixed(2)}MHz] [A: ${this.overallAverageAsicTemp.toFixed(1)} VR: ${this.overallAverageVrTemp.toFixed(1)}°C]	${message}`);
 	}
 
 	stabiliseOn(): void {
@@ -580,10 +580,10 @@ export class MonitorService {
 		}
 
 		if (this.changeMessage.includes('[Step Up') || this.changeMessage.includes('[Step Down')) {
-			this.logMon(`[BITAXE] -------------------------------------------------------------`);
+			this.logMon(`[BITAXE   ] -------------------------------------------------------------`);
 		}
 
-		this.logMon(`[BITAXE] ${this.changeMessage !== '' ? this.changeMessage : ''}\t\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`);
+		this.logMon(`[BITAXE   ] ${this.changeMessage !== '' ? this.changeMessage : ''}\t\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`);
 		this.changeMessage='';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
