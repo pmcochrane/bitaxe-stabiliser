@@ -86,6 +86,8 @@ export interface VoltageEntry {
 	avgHashRate: number;
 	avgAsicTemp: number;
 	avgVrTemp: number;
+	avgPower: number;
+	efficiency: number;
 	lastUpdate: string;
 }
 

@@ -29,10 +29,10 @@ export class MonitorService {
 	private stabilisedCounterDefault = 15;
 	private drasticMeasureDelay = 3;
 	private stepDownSettleDelay = 5;
-	private autotuneSettleDelay = 10;
 	private voltageOverheatReduction = 5;
+	private maxCoreVoltage = 1450;
+	private initialMaxCoreVoltage = 1450;
 
-	private maxSweepSteps = 24;
 	private getMinStepDown(): number {
 		return Math.floor((this.settings.maxFreq - 400) / 6.25) * -1;
 	}
@@ -59,8 +59,8 @@ export class MonitorService {
 		this.applyChange = true;
 	}
 
+	private maxSweepSteps = 24;
 	private sweepIterations = 150;
-	private sweepStabilisationTime = 20;
 	private sweepIterationsCounter = 0;
 	private sweepStartTime = '';
 
@@ -76,23 +76,23 @@ export class MonitorService {
 	private autoAdjustFreq = true;
 
 	private autotuneEnabled = false;
-	private maxCoreVoltage = 1450;
-	private initialMaxCoreVoltage = 1450;
+	private autotuneSettleDelay = 10;
+	private autotuneIntervalCounts = 30;
+	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
+	private autotuneIncreasedVoltageCounter: number = 0;
+	private autotuneStableCount: number = 0;
+	private flipFlopCount = 0;
+	private bestToExpected = -Infinity;
+	private bestVoltage = 0;
+
 	private stepDownBlocklist: Map<number, number> = new Map();
 	private stepDownBlocklistDuration = 150;
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
 	private lastStepDown: number | null = null;
 	private settleDelayCounter = 0;
-	private autotuneIntervalCounts = 30;
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
-	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
-	private flipFlopCount = 0;
-	private bestToExpected = -Infinity;
-	private bestVoltage = 0;
-	private autotuneIncreasedVoltageCounter: number = 0;
-	private autotuneStableCount: number = 0;
 
 	constructor(settings: Settings, store: DataStore, autotuneOptions?: AutotuneOptions) {
 		this.settings = settings;
@@ -434,7 +434,7 @@ export class MonitorService {
 		const newVoltage = currentVoltage - this.voltageOverheatReduction;
 		const clampedVoltage = Math.max(700, newVoltage);
 		this.voltageMap.set(frequency, clampedVoltage);
-		this.store.setVoltageForFrequency(frequency, clampedVoltage, 0, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+		this.store.setVoltageForFrequency(frequency, clampedVoltage, 0, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 		this.logMon(`${logPrefix} Quick overheat after step change			Decreasing voltage to ${clampedVoltage}mV`);
 		this.autotuneIncreasedVoltageCounter = 0;
 		return true;
@@ -498,7 +498,7 @@ export class MonitorService {
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%					Flip-flop detected! Selected best ${currentVoltage}mV`);
 			this.changeMessage = `						`;
 			this.autotuneFlipFlop = [];
@@ -537,12 +537,12 @@ export class MonitorService {
 				this.autotuneIncreasedVoltageCounter = 30; // 30 cycles to state that voltage was recently increased
 				this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - 5}mv			Increasing voltage to ${currentVoltage}mV`)
 				this.changeMessage = `						`;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 
 			} else {
 				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Max voltage reached (no change)`);
 				this.changeMessage = `						`;
@@ -559,7 +559,7 @@ export class MonitorService {
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Decreasing voltage to ${currentVoltage}mV`);
 				this.changeMessage = `						`;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 			} else {
 				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Minimum voltage so no change`);
 			}
@@ -567,7 +567,7 @@ export class MonitorService {
 		} else {	// toExpected >=0 && <=1 - keep the same voltage
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%	@ ${currentVoltage}mV			Keep voltage at ${currentVoltage}mV`);
 			this.autotuneStableCount++;
@@ -761,7 +761,7 @@ export class MonitorService {
 
 			this.sweepIterationsCounter++;
 			if (this.sweepIterationsCounter === 1 || this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
-				this.logMon(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${(this.overallAverageHashRate / 1e6).toFixed(2)} MH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/TH`);
+				this.logMon(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${this.overallAverageHashRate.toFixed(3)} TH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/TH`);
 			}
 			if (this.sweepIterationsCounter >= this.sweepIterations) {
 				if (this.state.stepDown >= 0) {

@@ -299,7 +299,7 @@ export class DataStore {
 		return this.data.voltages.find(e => Math.abs(e.frequency - frequency) < 1);
 	}
 
-	setVoltageForFrequency(frequency: number, coreVoltage: number, toExpected: number = 0, avgHashRate: number = 0, avgAsicTemp: number = 0, avgVrTemp: number = 0): void {
+	setVoltageForFrequency(frequency: number, coreVoltage: number, toExpected: number = 0, avgHashRate: number = 0, avgAsicTemp: number = 0, avgVrTemp: number = 0, avgPower: number = 0, efficiency: number = 0): void {
 		const existingIndex = this.data.voltages.findIndex(e => Math.abs(e.frequency - frequency) < 1);
 		const entry: VoltageEntry = {
 			frequency,
@@ -308,6 +308,8 @@ export class DataStore {
 			avgHashRate,
 			avgAsicTemp,
 			avgVrTemp,
+			avgPower,
+			efficiency,
 			lastUpdate: new Date().toISOString(),
 		};
 

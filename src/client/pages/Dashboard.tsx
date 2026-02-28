@@ -1083,6 +1083,8 @@ export default function Dashboard() {
 														<th className="text-right p-1 dark:text-white w-auto">Core Voltage (mV)</th>
 														<th className="text-right p-1 dark:text-white w-auto">toExpected (%)</th>
 														<th className="text-right p-1 dark:text-white w-auto">Hashrate (GH/s)</th>
+														<th className="text-right p-1 dark:text-white w-auto">Power (W)</th>
+														<th className="text-right p-1 dark:text-white w-auto">Efficiency (J/TH)</th>
 														<th className="text-right p-1 dark:text-white w-auto">ASIC Temp (°C)</th>
 														<th className="text-right p-1 dark:text-white w-auto">VR Temp (°C)</th>
 														<th className="text-right p-1 dark:text-white w-auto">Last Changed</th>
@@ -1098,6 +1100,8 @@ export default function Dashboard() {
 																<td className="p-1 text-right dark:text-white w-auto">{v.coreVoltage ?? 0}</td>
 																<td className={`p-1 text-right w-auto ${getToExpectedColor(v.toExpected ?? 0)}`}>{(v.toExpected ?? 0).toFixed(2)}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{((v.avgHashRate ?? 0) / 1000).toFixed(3)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{(v.avgPower ?? 0).toFixed(1)}</td>
+																<td className="p-1 text-right dark:text-white w-auto">{(v.efficiency ?? 0).toFixed(2)}</td>
 																<td className={`p-1 text-right w-auto ${getTempColor(v.avgAsicTemp ?? 0, settingsForm.targetAsic)}`}>{(v.avgAsicTemp ?? 0).toFixed(1)}</td>
 																<td className={`p-1 text-right w-auto ${getTempColor(v.avgVrTemp ?? 0, settingsForm.maxVr)}`}>{(v.avgVrTemp ?? 0).toFixed(1)}</td>
 																<td className="p-1 text-right dark:text-white w-auto">{v.lastUpdate ? formatTimeAgo(v.lastUpdate) : '-'}</td>
