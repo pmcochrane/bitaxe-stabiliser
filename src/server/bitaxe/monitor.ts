@@ -223,7 +223,7 @@ export class MonitorService {
 		this.changeMessage=`[Sweep] [1/1] Started: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
-			message: '${this.changeMessage}',
+			message: `${this.changeMessage}`,
 			timestamp: new Date().toISOString(),
 		});
 	}
@@ -237,7 +237,7 @@ export class MonitorService {
 		this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown} -> ${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
-			message: '${this.changeMessage}',
+			message: `${this.changeMessage}`,
 			timestamp: new Date().toISOString(),
 		});
 	}
@@ -320,7 +320,7 @@ export class MonitorService {
 			this.overallAverageAsicTemp = info.temp;
 			this.overallAverageVrTemp = info.vrTemp;
 			this.overallAverageVoltage = (info.voltage / 1000) | 0;
-			this.overallAveragePower = (info.power * 10) | 0 / 10;
+			this.overallAveragePower = ((info.power * 10) | 0) / 10;
 
 			const existingRange = this.store.getHashrangeEntry(this.desiredFreq, this.settings.coreVoltage);
 			if (existingRange) {
