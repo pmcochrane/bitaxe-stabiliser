@@ -144,6 +144,7 @@ export class MonitorService {
 		if (this.state.running) return;
 
 		this.state.running = true;
+		this.changeMessage = 'Starting monitor service...';
 		this.applyChange = true;
 		this.state.stepDown = this.settings.stepDownDefault ?? -10;
 		this.state.stabilisedCounter = this.stabilisedCounterDefault;
@@ -158,6 +159,7 @@ export class MonitorService {
 		this.stepDownBlocklist.clear();
 
 		this.runLoop();
+		
 	}
 
 	stop(): void {
@@ -193,7 +195,7 @@ export class MonitorService {
 		}
 		this.applyChange = true;
 		this.stepDownBlocklist.clear();
-		this.changeMessage=`[Manual] Step adjusted: ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[UI] Step adjusted: ${oldStepDown}->${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'control',
 			message: `Stepdown adjusted by ${delta}: ${this.changeMessage}`,
@@ -220,7 +222,7 @@ export class MonitorService {
 		this.sweepIterationsCounter = 0;
 		this.sweepStartTime = new Date().toISOString();
 		this.store.clearHashrange();
-		this.changeMessage=`[Sweep] [1/1] Started: Step ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] [1/1] Started: Step ${oldStepDown}->${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: `${this.changeMessage}`,
@@ -234,7 +236,7 @@ export class MonitorService {
 		this.state.stepDown = 0;
 		this.autoAdjustFreq = true;
 		this.applyChange = true;
-		this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown} -> ${this.state.stepDown}`;
+		this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown}->${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: `${this.changeMessage}`,
@@ -623,7 +625,7 @@ export class MonitorService {
 				if (this.state.stepDown < this.getMinStepDown()) {
 					this.state.stepDown = this.getMinStepDown();
 				}
-				this.changeMessage=`[EMERGENCY] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`[EMERGENCY] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -644,7 +646,7 @@ export class MonitorService {
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
 				this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-				this.changeMessage=`[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+				this.changeMessage=`[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
 				this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -668,7 +670,7 @@ export class MonitorService {
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
 					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-					this.changeMessage = `[Drastic  ] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage = `[Drastic  ] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown}->${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
 					this.state.stepUpCounter = this.stepUpEveryXPasses;
@@ -690,7 +692,7 @@ export class MonitorService {
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
 					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-					this.changeMessage=`[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage=`[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.stepUpCounter = this.stepUpEveryXPasses;
 					this.state.stepDownCounter = this.stepDownEveryXPasses;
@@ -711,7 +713,7 @@ export class MonitorService {
 							if (this.state.stepDown > this.maxStepUp) {
 								this.state.stepDown = this.maxStepUp;
 							} else {
-								this.changeMessage=`[Step Up  ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown} -> ${this.state.stepDown}`;
+								this.changeMessage=`[Step Up  ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown}->${this.state.stepDown}`;
 								this.applyChange = true;
 								this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 							}
@@ -765,7 +767,7 @@ export class MonitorService {
 					const oldStepDown = this.state.stepDown;
 					this.state.stepDown++;
 					this.sweepIterationsCounter = 0;
-					this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Sweep increment: Step ${oldStepDown} -> ${this.state.stepDown}`;
+					this.changeMessage=`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Sweep increment: Step ${oldStepDown}->${this.state.stepDown}`;
 					this.applyChange = true;
 				}
 			}
