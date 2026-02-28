@@ -410,7 +410,7 @@ export class MonitorService {
 		const clampedVoltage = Math.max(700, newVoltage);
 		this.voltageMap.set(frequency, clampedVoltage);
 		this.store.setVoltageForFrequency(frequency, clampedVoltage, 0, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
-		this.logMon(`[Autotune-] Quick overheat after step change					Decreasing voltage to ${clampedVoltage}mV`);
+		this.logMon(`[Autotune-] Quick overheat after step change			Decreasing voltage to ${clampedVoltage}mV`);
 		return true;
 	}
 
@@ -473,7 +473,7 @@ export class MonitorService {
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}% Flip-flop detected! Selected best ${currentVoltage}mV`);
-			this.changeMessage=`						`;
+			this.changeMessage=`					`;
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
 			this.bestToExpected = -Infinity;
@@ -484,7 +484,7 @@ export class MonitorService {
 		if (toExpected < 0) {
 			if (this.state.autotuneSettleCounter > 0) {
 				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Skipping voltage increase - settling after step change`);
-				this.changeMessage = `						`;
+				this.changeMessage = `					`;
 			} else if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
 				const oldStepDown = this.state.stepDown;
 				this.state.stepDown--;
@@ -494,7 +494,7 @@ export class MonitorService {
 				this.stepDownBlocklist.set(this.state.stepDown, this.stepDownBlocklistDuration);
 				this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
 				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Stepping down - ASIC temp too close to target: ${this.overallAverageAsicTemp.toFixed(1)}°C > ${(this.settings.targetAsic - this.settings.asicTempTolerance).toFixed(2)}°C`);
-				this.changeMessage = `						`;
+				this.changeMessage = `					`;
 				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				this.applyChange = true;
 			} else if (currentVoltage < this.maxCoreVoltage) {
@@ -504,7 +504,7 @@ export class MonitorService {
 				this.applyChange = true;
 				this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 				this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%					Increasing voltage to ${currentVoltage}mV`)
-				this.changeMessage=`						`;
+				this.changeMessage=`					`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			} else {
 				currentVoltage = this.bestVoltage;
@@ -512,7 +512,7 @@ export class MonitorService {
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%					Max voltage reached (no change): ${currentVoltage}mV`);
-				this.changeMessage=`						`;
+				this.changeMessage=`					`;
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 				this.settleDelayCounter = this.autotuneIntervalCounts;
@@ -524,7 +524,7 @@ export class MonitorService {
 			this.applyChange = true;
 			this.settleDelayCounter = this.autotuneIntervalCounts * 2;
 			this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%					Decreasing voltage to ${currentVoltage}mV`);
-				this.changeMessage=`						`;
+				this.changeMessage=`					`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 		} else {
 			currentVoltage = this.bestVoltage;
@@ -532,7 +532,7 @@ export class MonitorService {
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
 			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%					No voltage change: ${currentVoltage}mV`);
-			this.changeMessage=`						`;
+			this.changeMessage=`					`;
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
 			this.settleDelayCounter = this.autotuneIntervalCounts;
@@ -647,7 +647,7 @@ export class MonitorService {
 			if (this.autotuneEnabled && this.currentTunedVoltage !== null && this.currentTunedVoltage < this.maxCoreVoltage) {
 				this.maxCoreVoltage = this.currentTunedVoltage;
 				this.logMon(`[Autotune-] VR temp exceeded maxVr (${fmaxVr}°C). Reducing maxCoreVoltage to ${this.maxCoreVoltage}mV`);
-				this.changeMessage=`						`;
+				this.changeMessage=`					`;
 			}
 		} else if (status.avgAsicTemp > fmaxAsic && this.autoAdjustFreq && this.state.stepDownSettleCounter <= 0) {
 			if (status.temp > emergencyOverheat) {
