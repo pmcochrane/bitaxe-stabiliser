@@ -485,18 +485,24 @@ export class MonitorService {
 			if (this.state.autotuneSettleCounter > 0) {
 				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Skipping voltage increase - settling after step change`);
 				this.changeMessage = `					`;
+
 			} else if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
 				const oldStepDown = this.state.stepDown;
 				this.state.stepDown--;
 				if (this.state.stepDown < this.getMinStepDown()) {
 					this.state.stepDown = this.getMinStepDown();
 				}
-				this.stepDownBlocklist.set(this.state.stepDown, this.stepDownBlocklistDuration);
+				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
+				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp`);
 				this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
 				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Stepping down - ASIC temp too close to target: ${this.overallAverageAsicTemp.toFixed(1)}°C > ${(this.settings.targetAsic - this.settings.asicTempTolerance).toFixed(2)}°C`);
 				this.changeMessage = `					`;
-				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				this.applyChange = true;
+				this.state.stepUpCounter = this.stepUpEveryXPasses;
+				this.state.stepDownCounter = this.stepDownEveryXPasses;
+				this.state.stepDownSettleCounter = this.stepDownSettleDelay;				
+				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
+
 			} else if (currentVoltage < this.maxCoreVoltage) {
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;
@@ -506,6 +512,7 @@ export class MonitorService {
 				this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%					Increasing voltage to ${currentVoltage}mV`)
 				this.changeMessage=`					`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp);
+
 			} else {
 				currentVoltage = this.bestVoltage;
 				this.currentTunedVoltage = currentVoltage;
@@ -618,6 +625,10 @@ export class MonitorService {
 				}
 				this.changeMessage=`[EMERGENCY] Emergency cooling: ${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
+				this.state.stepUpCounter = this.stepUpEveryXPasses;
+				this.state.stepDownCounter = this.stepDownEveryXPasses;
+				this.state.stepDownSettleCounter = this.stepDownSettleDelay;				
+				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 			}
 			return;
 		}
@@ -633,7 +644,6 @@ export class MonitorService {
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
 				this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-				this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				this.changeMessage=`[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 				this.applyChange = true;
 				this.state.stepUpCounter = this.stepUpEveryXPasses;
@@ -658,11 +668,12 @@ export class MonitorService {
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
 					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 					this.changeMessage = `[Drastic  ] ASIC temp Critical: ${status.avgAsicTemp.toFixed(1)}°C\tDrastic measures ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
 					this.state.drasticMeasureCounter = 0;
-					this.state.stepDownSettleCounter = this.stepDownSettleDelay;
+					this.state.stepUpCounter = this.stepUpEveryXPasses;
+					this.state.stepDownCounter = this.stepDownEveryXPasses;
+					this.state.stepDownSettleCounter = this.stepDownSettleDelay;				
 					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				} else {
 					this.state.drasticMeasureCounter++;
@@ -679,9 +690,10 @@ export class MonitorService {
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
 					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
 					this.reduceStoredVoltage(this.desiredFreq, oldStepDown);
-					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 					this.changeMessage=`[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown} -> ${this.state.stepDown}`;
 					this.applyChange = true;
+					this.state.stepUpCounter = this.stepUpEveryXPasses;
+					this.state.stepDownCounter = this.stepDownEveryXPasses;
 					this.state.stepDownSettleCounter = this.stepDownSettleDelay;
 					this.state.autotuneSettleCounter = this.autotuneSettleDelay;
 				}
