@@ -60,7 +60,7 @@ export class MonitorService {
 	}
 
 	private maxSweepSteps = 24;
-	private sweepIterations = 150;
+	private sweepIterations = 180;
 	private sweepIterationsCounter = 0;
 	private sweepStartTime = '';
 
@@ -235,13 +235,13 @@ export class MonitorService {
 	startSweep(): void {
 		const oldStepDown = this.state.stepDown;
 		this.state.sweepMode = true;
-		this.state.stepDown = -this.maxSweepSteps;
+		this.state.stepDown = 0-this.maxSweepSteps;
 		this.autoAdjustFreq = false;
 		this.applyChange = true;
 		this.sweepIterationsCounter = 0;
 		this.sweepStartTime = new Date().toISOString();
 		this.store.clearHashrange();
-		this.changeMessage = `[Sweep] [1/1] Started: Step ${oldStepDown}->${this.state.stepDown}`;
+		this.changeMessage = `[Sweep    ] [1/1] Started: Step ${oldStepDown}->${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: `${this.changeMessage}`,
@@ -255,7 +255,7 @@ export class MonitorService {
 		this.state.stepDown = 0;
 		this.autoAdjustFreq = true;
 		this.applyChange = true;
-		this.changeMessage = `[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown}->${this.state.stepDown}`;
+		this.changeMessage = `[Sweep    ] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown}->${this.state.stepDown}`;
 		this.store.addEvent({
 			type: 'sweep',
 			message: `${this.changeMessage}`,
@@ -742,6 +742,7 @@ export class MonitorService {
 			this.state.autotuneSettleCounter--;
 		}
 
+		// Processing for sweep mode
 		if (this.state.sweepMode) {
 			const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
 			const fmaxVr = this.settings.maxVr;
@@ -760,8 +761,8 @@ export class MonitorService {
 			}
 
 			this.sweepIterationsCounter++;
-			if (this.sweepIterationsCounter === 1 || this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
-				this.logMon(`[Sweep] [${this.sweepIterationsCounter}/${this.sweepIterations}] To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${this.overallAverageHashRate.toFixed(3)} TH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/TH`);
+			if (this.sweepIterationsCounter % 15 === 0 || this.sweepIterationsCounter >= this.sweepIterations) {
+				this.logMon(`[Sweep    ] [${this.sweepIterationsCounter}/${this.sweepIterations}] To Expected: ${status.toExpected.toFixed(2)}% | Avg Hash: ${(this.overallAverageHashRate/1000).toFixed(3)} TH/s, ASIC: ${this.overallAverageAsicTemp.toFixed(1)}°C, VR: ${this.overallAverageVrTemp.toFixed(1)}°C, Voltage: ${this.overallAverageVoltage}mV, Power: ${this.overallAveragePower}W, Efficiency: ${status.efficiency.toFixed(2)} J/TH`);
 			}
 			if (this.sweepIterationsCounter >= this.sweepIterations) {
 				if (this.state.stepDown >= 0) {
