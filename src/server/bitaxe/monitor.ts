@@ -549,9 +549,9 @@ export class MonitorService {
 			}
 
 			const voltageIncreaseCount = this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0;
-			if (voltageIncreaseCount >= 3) {
+			if (voltageIncreaseCount >= 5) {
 				this.autotuneVoltageIncreaseCapReached = true;
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/3) - Autotune off until step change`);
+				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/5) - Autotune off until step change`);
 				this.changeMessage = `						`;
 				this.autotuneConsecutiveUnderperformanceCount = 0;
 				return;
@@ -616,7 +616,7 @@ export class MonitorService {
 		this.desiredFreq = this.settings.maxFreq + stepFreq;
 
 		if (!this.baselineVoltages.has(this.desiredFreq)) {
-			this.baselineVoltages.set(this.desiredFreq, this.settings.coreVoltage);
+			this.baselineVoltages.set(this.desiredFreq, this.appliedCoreVoltage || this.settings.coreVoltage);
 		}
 
 		const hasStoredVoltage = this.voltageMap.has(this.desiredFreq);
@@ -625,7 +625,7 @@ export class MonitorService {
 		const hasTunedVoltage = this.currentTunedVoltage !== null &&
 			Math.abs(this.desiredFreq - this.state.lastFrequencyApplied) < 1;
 
-		let baseVoltage = storedVoltage ?? baselineVoltage ?? this.settings.coreVoltage;
+		let baseVoltage = storedVoltage ?? baselineVoltage ?? this.appliedCoreVoltage ?? this.settings.coreVoltage;
 		let voltageSource = hasStoredVoltage ? '[Stored] ' : '';
 
 		if (hasTunedVoltage && this.currentTunedVoltage !== null) {
@@ -633,6 +633,8 @@ export class MonitorService {
 			voltageSource = '[Tuned] ';
 		} else if (!hasStoredVoltage && baselineVoltage !== undefined && baselineVoltage !== this.settings.coreVoltage) {
 			voltageSource = '[Baseline] ';
+		} else if (!hasStoredVoltage && !hasTunedVoltage && this.appliedCoreVoltage > 0) {
+			voltageSource = '[PrevVolt] ';
 		} else if (!hasStoredVoltage && !hasTunedVoltage) {
 			voltageSource = '[Default] ';
 		}
