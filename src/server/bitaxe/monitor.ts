@@ -569,7 +569,7 @@ export class MonitorService {
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
-				this.autotuneIncreasedVoltageCounter = 30; // 30 cycles to state that voltage was recently increased
+				this.autotuneIncreasedVoltageCounter = this.autotuneEveryXcycles + 1; // autotuneEveryXcycles cycles to state that voltage was recently increased
 				const newIncreaseCount = (this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0) + 1;
 				this.autotuneVoltageIncreaseCount.set(this.desiredFreq, newIncreaseCount);
 				this.autotuneConsecutiveUnderperformanceCount = 0;
