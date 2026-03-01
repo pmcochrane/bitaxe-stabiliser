@@ -51,7 +51,8 @@ export class MonitorService {
 	private autoAdjustFreq = true;
 
 	private autotuneEnabled = false;
-	private autotuneEveryXcycles = 30-1; // minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
+	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
+	private autotuneReversalThreshold = 0.05;	// the minimum change in toExpected required to consider a change in direction as a reversal, helps to prevent overreacting to minor fluctuations which may not indicate a real change in trend
 	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
@@ -64,7 +65,6 @@ export class MonitorService {
 	private autotunePreviousToExpected: number | null = null;
 	private autotuneVoltageDirection: 'increasing' | 'decreasing' | null = null;
 	private autotuneSettleDelayCounter = 0;
-	private autotuneReversalThreshold = 0.1;
 
 	private stepDownBlocklist: Map<number, number> = new Map();
 	private stepDownBlocklistDuration = 150;
@@ -594,14 +594,14 @@ export class MonitorService {
 				return;
 			}
 
-			const voltageIncreaseCount = this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0;
-			if (voltageIncreaseCount >= 5) {
-				this.autotuneVoltageIncreaseCapReached = true;
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/5) - Autotune off until step change`);
-				this.changeMessage = `						`;
-				this.autotuneConsecutiveUnderperformanceCount = 0;
-				return;
-			}
+			// const voltageIncreaseCount = this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0;
+			// if (voltageIncreaseCount >= 10) {
+			// 	this.autotuneVoltageIncreaseCapReached = true;
+			// 	this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/5) - Autotune off until step change`);
+			// 	this.changeMessage = `						`;
+			// 	this.autotuneConsecutiveUnderperformanceCount = 0;
+			// 	return;
+			// }
 
 			if (currentVoltage < this.maxCoreVoltage) {
 				this.autotuneConsecutiveUnderperformanceCount = 0;
