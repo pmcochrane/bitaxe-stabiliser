@@ -50,13 +50,16 @@ export class MonitorService {
 		} else {
 			this.logMon(`${logPrefix} Voltage was not recently increased so leaving as is`);
 		}
+		this.resetAfterStepChange();
+		this.applyChange = true;
+	}
 
+	private resetAfterStepChange(): void {
 		this.autotuneStableCount = 0;
 		this.state.stepUpCounter = this.stepUpEveryXPasses;
 		this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.state.stepDownSettleCounter = this.stepDownSettleDelay;
-		this.state.autotuneSettleCounter = this.autotuneSettleDelay;
-		this.applyChange = true;
+		this.autotuneSettleDelayCounter = this.autotuneEveryXcycles;
 	}
 
 	private maxSweepSteps = 24;
@@ -76,8 +79,7 @@ export class MonitorService {
 	private autoAdjustFreq = true;
 
 	private autotuneEnabled = false;
-	private autotuneSettleDelay = 10;
-	private autotuneIntervalCounts = 30;
+	private autotuneEveryXcycles = 30-1; // minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
 	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
@@ -125,7 +127,6 @@ export class MonitorService {
 			lastCoreVoltageApplied: 0,
 			drasticMeasureCounter: this.drasticMeasureDelay,
 			stepDownSettleCounter: 0,
-			autotuneSettleCounter: 0,
 		};
 	}
 
@@ -179,7 +180,7 @@ export class MonitorService {
 		this.state.stabilisedCounter = this.stabilisedCounterDefault;
 		this.state.reachedInitialTemp = false;
 		this.state.stepDownSettleCounter = 0;
-		this.state.autotuneSettleCounter = 0;
+		this.autotuneSettleDelayCounter = 0;
 		this.asicTemps = [];
 		this.vrTemps = [];
 		this.iteration = 0;
@@ -448,7 +449,7 @@ export class MonitorService {
 		// If the stepDown value has changed since the last autotune cycle, we should reset autotune state to allow it to adapt to the new frequency range
 		if (this.state.stepDown !== this.lastStepDown) {
 			this.lastStepDown = this.state.stepDown;
-			this.autotuneSettleDelayCounter = this.autotuneIntervalCounts;
+			this.autotuneSettleDelayCounter = this.autotuneEveryXcycles;
 			this.currentTunedVoltage = null;
 			this.autotuneFlipFlop = [];
 			this.flipFlopCount = 0;
@@ -466,11 +467,8 @@ export class MonitorService {
 			this.autotuneSettleDelayCounter--;
 			return;
 		}
-
-		// If we recently increased voltage, we should wait for a few cycles before allowing autotune to make further adjustments to give the system time to stabilise and to avoid reducing voltage too quickly if we are in a high temp situation
-		if (this.state.autotuneSettleCounter > 0) {
-			this.logMon(`[Autotune ] Skipping voltage adjustment - settling after step change (${this.state.autotuneSettleCounter} cycles remaining)`);
-		}
+		// only do autotune every X cycles to allow time for changes to take effect and be measured
+		this.autotuneSettleDelayCounter = this.autotuneEveryXcycles; 
 
 		const baseline = this.baselineVoltages.get(this.desiredFreq) ?? this.settings.coreVoltage;
 		let currentVoltage = this.currentTunedVoltage ?? this.voltageMap.get(this.desiredFreq) ?? baseline;
@@ -518,7 +516,7 @@ export class MonitorService {
 		}
 
 		// If we've been stable for 4+ cycles, stop adjusting and preserve the working voltage
-		if (this.autotuneSettleDelayCounter === 0 && this.autotuneStableCount >= 4) {
+		if (this.autotuneStableCount >= 4) {
 			this.logMon(`[Autotune=] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage}mV			Stable - preserving voltage (${this.autotuneStableCount} cycles)`);
 			this.changeMessage = `						`;
 			return;
@@ -538,12 +536,6 @@ export class MonitorService {
 			this.autotuneConsecutiveUnderperformanceCount++;
 			this.autotuneStableCount = 0;
 
-			if (this.autotuneSettleDelayCounter > 0) {
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Underperformance (${this.autotuneConsecutiveUnderperformanceCount}/3) - waiting for settle`);
-				this.changeMessage = `						`;
-				return;
-			}
-
 			if (this.autotuneConsecutiveUnderperformanceCount < 3) {
 				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Underperformance (${this.autotuneConsecutiveUnderperformanceCount}/3)`);
 				this.changeMessage = `						`;
@@ -560,11 +552,7 @@ export class MonitorService {
 				return;
 			}
 
-			if (this.state.autotuneSettleCounter > 0) {		// Wait for au
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Skipping voltage increase - settling after step change`);
-				this.changeMessage = `						`;
-
-			} else if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
+			if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
 				this.autotuneConsecutiveUnderperformanceCount = 0;
 				const fminAsicAutotune = this.settings.targetAsic - this.settings.asicTempTolerance;
 				this.logMon(`[DEBUG] Autotune ASIC check: ${this.overallAverageAsicTemp.toFixed(1)}°C > ${fminAsicAutotune.toFixed(2)}°C (targetAsic - tol)`);
@@ -583,7 +571,6 @@ export class MonitorService {
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
-				this.autotuneSettleDelayCounter = this.autotuneIntervalCounts * 2;
 				this.autotuneIncreasedVoltageCounter = 30; // 30 cycles to state that voltage was recently increased
 				const newIncreaseCount = (this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0) + 1;
 				this.autotuneVoltageIncreaseCount.set(this.desiredFreq, newIncreaseCount);
@@ -601,7 +588,6 @@ export class MonitorService {
 				this.changeMessage = `						`;
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
-				this.autotuneSettleDelayCounter = this.autotuneIntervalCounts;
 			}
 		} else if (toExpected > 1) { 	// toExpected > 1%  decrease voltage to save power and reduce temps as over efficient
 			this.autotuneConsecutiveUnderperformanceCount = 0;
@@ -610,7 +596,6 @@ export class MonitorService {
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
 				this.applyChange = true;
-				this.autotuneSettleDelayCounter = this.autotuneIntervalCounts * 2;
 				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Decreasing voltage to ${currentVoltage}mV`);
 				this.changeMessage = `						`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
@@ -624,14 +609,11 @@ export class MonitorService {
 			this.currentTunedVoltage = currentVoltage;
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			if (this.autotuneSettleDelayCounter === 0) {
-				this.autotuneStableCount++;
-			}
+			this.autotuneStableCount++;
 			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%	@ ${currentVoltage}mV			Stable at ${currentVoltage}mV (${this.autotuneStableCount} cycles)`);
 			this.changeMessage = `						`;
 			this.bestToExpected = -Infinity;
 			this.bestVoltage = 0;
-			this.autotuneSettleDelayCounter = this.autotuneIntervalCounts;
 		}
 	}
 
@@ -703,6 +685,8 @@ export class MonitorService {
 
 		if (status.overheatMode) {
 			this.changeMessage = 'Overheat mode detected!';
+			this.applyChange = true;
+			return;
 		}
 
 		if (!this.state.stabilise) {
@@ -774,9 +758,8 @@ export class MonitorService {
 								this.applyChange = true;
 							} else {
 								this.changeMessage = `[Step Up  ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown}->${this.state.stepDown}`;
-								this.applyChange = true;
-								this.state.autotuneSettleCounter = this.autotuneSettleDelay;
-							}
+								this.resetAfterStepChange();
+								this.applyChange = true;}
 						}
 					} else {
 						// logMonitor(`[${this.iteration}] [Blocked ] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
@@ -795,10 +778,6 @@ export class MonitorService {
 			this.state.stepDownSettleCounter--;
 		}
 
-		if (this.state.autotuneSettleCounter > 0) {
-			this.state.autotuneSettleCounter--;
-		}
-
 		// Processing for sweep mode
 		if (this.state.sweepMode) {
 			const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
@@ -811,7 +790,7 @@ export class MonitorService {
 				this.currentTunedVoltage = throttleVoltage;
 				this.voltageMap.set(this.desiredFreq, throttleVoltage);
 				this.applyChange = true;
-				this.autotuneSettleDelayCounter = this.autotuneIntervalCounts * 2;
+				this.autotuneSettleDelayCounter = this.autotuneEveryXcycles * 2;
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 				this.logMon(`[Sweep  !  ] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);

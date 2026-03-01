@@ -125,5 +125,4 @@ export interface MonitorState {
 	lastCoreVoltageApplied: number;
 	drasticMeasureCounter: number;
 	stepDownSettleCounter: number;
-	autotuneSettleCounter: number;
 }
