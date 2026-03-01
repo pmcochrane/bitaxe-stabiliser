@@ -233,17 +233,19 @@ async function main() {
 		});
 	}
 
-	process.on('SIGINT', () => {
+	process.on('SIGINT', async () => {
 		logIndex('Shutting down...');
 		monitor.stop();
 		store.forceSave();
+		await monitor.resetToDefaults();
 		process.exit(0);
 	});
 
-	process.on('SIGTERM', () => {
+	process.on('SIGTERM', async () => {
 		logIndex('Shutting down...');
 		monitor.stop();
 		store.forceSave();
+		await monitor.resetToDefaults();
 		process.exit(0);
 	});
 

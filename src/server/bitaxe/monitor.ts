@@ -7,6 +7,7 @@ export interface AutotuneOptions {
 	autotuneEnabled: boolean;
 	maxCoreVoltage: number;
 	voltageMap: VoltageEntry[];
+	autotuneReversalThreshold?: number;
 }
 
 export class MonitorService {
@@ -63,6 +64,7 @@ export class MonitorService {
 	private autotunePreviousToExpected: number | null = null;
 	private autotuneVoltageDirection: 'increasing' | 'decreasing' | null = null;
 	private autotuneSettleDelayCounter = 0;
+	private autotuneReversalThreshold = 0.1;
 
 	private stepDownBlocklist: Map<number, number> = new Map();
 	private stepDownBlocklistDuration = 150;
@@ -112,6 +114,7 @@ export class MonitorService {
 			this.autotuneEnabled = autotuneOptions.autotuneEnabled;
 			this.maxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			this.initialMaxCoreVoltage = autotuneOptions.maxCoreVoltage;
+			this.autotuneReversalThreshold = autotuneOptions.autotuneReversalThreshold ?? 0.1;
 			for (const entry of autotuneOptions.voltageMap) {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
@@ -201,6 +204,11 @@ export class MonitorService {
 			clearTimeout(this.intervalId);
 			this.intervalId = null;
 		}
+	}
+
+	async resetToDefaults(): Promise<void> {
+		this.logMon(`Resetting Bitaxe to defaults: ${this.settings.maxFreq}MHz @ ${this.settings.coreVoltage}mV`);
+		await this.client.setSystemSettings(this.settings.maxFreq, this.settings.coreVoltage);
 	}
 
 	private logMon(message: string): void {
@@ -549,6 +557,33 @@ export class MonitorService {
 		}
 
 		// Eaxamine the toExpected value to determine whether we should increase, decrease, or maintain voltage
+		let currentDirection: 'increasing' | 'decreasing' | null = null;
+		if (localPreviousToExpected !== null) {
+			const diff = toExpected - localPreviousToExpected;
+			if (Math.abs(diff) > this.autotuneReversalThreshold) {
+				if (diff > 0) {
+					currentDirection = 'increasing';
+				} else {
+					currentDirection = 'decreasing';
+				}
+			}
+		}
+
+		const isReversing = currentDirection !== null &&
+			this.autotuneVoltageDirection !== null &&
+			currentDirection !== this.autotuneVoltageDirection;
+
+		const requiredDirection = toExpected < 0 ? 'increasing' : 'decreasing';
+		const voltageChangeAmount = 5;
+		
+		let actualDirection: 'increasing' | 'decreasing';
+		if (isReversing) {
+			actualDirection = requiredDirection === 'increasing' ? 'decreasing' : 'increasing';
+		} else {
+			actualDirection = requiredDirection;
+		}
+		this.autotuneVoltageDirection = actualDirection;
+
 		if (toExpected < 0) {	// toExpected < 0% increase voltage to improve hashrate as we are underperforming
 			this.autotuneConsecutiveUnderperformanceCount++;
 			this.autotuneStableCount = 0;
@@ -569,32 +604,25 @@ export class MonitorService {
 			}
 
 			if (currentVoltage < this.maxCoreVoltage) {
-				const isReversing = (localPreviousToExpected !== null && toExpected < localPreviousToExpected);
-				if (isReversing) {
-					this.autotuneVoltageDirection = 'decreasing';
-					this.autotuneConsecutiveUnderperformanceCount = 0;
-					this.autotuneIncreasedVoltageCounter = this.autotuneEveryXcycles + 1;
-					this.autotunePreviousToExpected = toExpected;
-					currentVoltage -= 10;
-					this.currentTunedVoltage = currentVoltage;
-					this.voltageMap.set(this.desiredFreq, currentVoltage);
-					this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 10}mv			Direction reversed - decreasing voltage to ${currentVoltage}mV`)
-					this.changeMessage = `						`;
-					this.applyChange = true;
-				} else {
-					this.autotuneVoltageDirection = 'increasing';
-					this.autotuneIncreasedVoltageCounter = this.autotuneEveryXcycles + 1;
+				this.autotuneConsecutiveUnderperformanceCount = 0;
+				this.autotuneIncreasedVoltageCounter = this.autotuneEveryXcycles + 1;
+				this.autotunePreviousToExpected = toExpected;
+
+				if (actualDirection === 'increasing') {
 					const newIncreaseCount = (this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0) + 1;
 					this.autotuneVoltageIncreaseCount.set(this.desiredFreq, newIncreaseCount);
-					this.autotuneConsecutiveUnderperformanceCount = 0;
-					this.autotunePreviousToExpected = toExpected;
-					currentVoltage += 5;
+					currentVoltage += voltageChangeAmount;
 					this.currentTunedVoltage = currentVoltage;
 					this.voltageMap.set(this.desiredFreq, currentVoltage);
-					this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - 5}mv			Increasing voltage to ${currentVoltage}mV [${newIncreaseCount}/3]`)
-					this.changeMessage = `						`;
-					this.applyChange = true;
+					this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - voltageChangeAmount}mv			Increasing voltage to ${currentVoltage}mV [${newIncreaseCount}/5]`)
+				} else {
+					currentVoltage -= voltageChangeAmount;
+					this.currentTunedVoltage = currentVoltage;
+					this.voltageMap.set(this.desiredFreq, currentVoltage);
+					this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + voltageChangeAmount}mv			Direction reversed - decreasing voltage to ${currentVoltage}mV`)
 				}
+				this.changeMessage = `						`;
+				this.applyChange = true;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 
 			} else {
@@ -607,36 +635,36 @@ export class MonitorService {
 				this.bestToExpected = -Infinity;
 				this.bestVoltage = 0;
 			}
+			
 		} else if (toExpected > 1) { 	// toExpected > 1%  decrease voltage to save power and reduce temps as over efficient
 			this.autotuneConsecutiveUnderperformanceCount = 0;
-			const isReversing = (localPreviousToExpected !== null && toExpected > localPreviousToExpected);
-			if (isReversing) {
-				if ((currentVoltage + 10) <= this.maxCoreVoltage) {
-					this.autotuneVoltageDirection = 'increasing';
-					this.autotunePreviousToExpected = toExpected;
-					this.changeMessage = `						`;
-					this.applyChange = true;
-					currentVoltage += 10;
-					this.currentTunedVoltage = currentVoltage;
-					this.voltageMap.set(this.desiredFreq, currentVoltage);
-					this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - 10}mv			Direction reversed - increasing voltage to ${currentVoltage}mV`);
-					this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-				} else {
-					this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage}mv			Direction reversed but max voltage reached`);
-					this.changeMessage = `						`;
-				}
-			} else if ( (currentVoltage-5) >= 700) {
-				this.autotuneVoltageDirection = 'decreasing';
+
+			const canDecrease = (currentVoltage - 5) >= 700;
+			const canIncrease = (currentVoltage + voltageChangeAmount) <= this.maxCoreVoltage;
+
+			if (actualDirection === 'decreasing' && canDecrease) {
 				this.autotunePreviousToExpected = toExpected;
 				this.changeMessage = `						`;
 				this.applyChange = true;
-				currentVoltage -= 5;
+				currentVoltage -= voltageChangeAmount;
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Decreasing voltage to ${currentVoltage}mV`);
+				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + voltageChangeAmount}mv			Decreasing voltage to ${currentVoltage}mV`);
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-			} else {
+			} else if (actualDirection === 'increasing' && canIncrease) {
+				this.autotunePreviousToExpected = toExpected;
+				this.changeMessage = `						`;
+				this.applyChange = true;
+				currentVoltage += voltageChangeAmount;
+				this.currentTunedVoltage = currentVoltage;
+				this.voltageMap.set(this.desiredFreq, currentVoltage);
+				this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - voltageChangeAmount}mv			Direction reversed - increasing voltage to ${currentVoltage}mV`);
+				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
+			} else if (actualDirection === 'decreasing' && !canDecrease) {
 				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Minimum voltage so no change`);
+				this.changeMessage = `						`;
+			} else if (actualDirection === 'increasing' && !canIncrease) {
+				this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage}mv			Direction reversed but max voltage reached`);
 				this.changeMessage = `						`;
 			}
 
