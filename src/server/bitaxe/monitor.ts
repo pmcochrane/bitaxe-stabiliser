@@ -212,7 +212,10 @@ export class MonitorService {
 	}
 
 	private logMon(message: string): void {
-		logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] [${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]	${message}`);
+		logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
+			+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]`
+			+`[${this.state.stepUpCounter} ${this.state.stepDownCounter} ${this.state.stabilisedCounter}]`
+			+`	${message}`);
 	}
 
 	stabiliseOn(): void {
@@ -811,34 +814,34 @@ export class MonitorService {
 			}
 			this.state.reachedInitialTemp = true;
 		} else if (status.avgAsicTemp < fminAsic && this.autoAdjustFreq && this.state.reachedInitialTemp) {
-			if (status.temp < this.settings.targetAsic) {
-				if (this.state.stepDown < this.maxStepUp) {
-					const targetStep = this.state.stepDown + 1;
-					if (!this.stepDownBlocklist.has(targetStep)) {
-						this.state.stepUpCounter--;
-						if (this.state.stepUpCounter < 0) {
-							const oldStepDown = this.state.stepDown;
-							this.state.stepDown++;
-							if (this.state.stepDown > this.maxStepUp) {
-								this.state.stepDown = this.maxStepUp;
-								this.changeMessage = `[Step Max ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tCannot Step Up above ${this.maxStepUp}`;
-								this.applyChange = true;
-							} else {
-								this.changeMessage = `[Step Up  ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown}->${this.state.stepDown}`;
-								this.resetAfterStepChange();
-								this.applyChange = true;}
-						}
-					} else {
-						// logMonitor(`[${this.iteration}] [Blocked ] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
-						this.state.stepUpCounter = this.stepUpEveryXPasses;
+			if (this.state.stepDown < this.maxStepUp) {
+				const targetStep = this.state.stepDown + 1;
+				if (!this.stepDownBlocklist.has(targetStep)) {
+					this.state.stepUpCounter--;
+					if (this.state.stepUpCounter < 0) {
+						const oldStepDown = this.state.stepDown;
+						this.state.stepDown++;
+						if (this.state.stepDown > this.maxStepUp) {
+							this.state.stepDown = this.maxStepUp;
+							this.changeMessage = `[Step Max ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tCannot Step Up above ${this.maxStepUp}`;
+							this.applyChange = true;
+						} else {
+							this.changeMessage = `[Step Up  ] ASIC temp low: ${status.avgAsicTemp.toFixed(1)}°C\tStep Up ${oldStepDown}->${this.state.stepDown}`;
+							this.resetAfterStepChange();
+							this.applyChange = true;}
 					}
+				} else {
+					// logMonitor(`[${this.iteration}] [Blocked ] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
+					this.state.stepUpCounter = this.stepUpEveryXPasses;
 				}
 			}
 		}
 
-		this.state.stabilisedCounter--;
-		if (this.state.stabilisedCounter < 0) {
-			this.state.reachedInitialTemp = true;
+		if (this.state.stabilisedCounter) {
+			this.state.stabilisedCounter--;
+			if (this.state.stabilisedCounter < 0) {
+				this.state.reachedInitialTemp = true;
+			}
 		}
 
 		if (this.state.stepDownSettleCounter > 0) {
