@@ -87,7 +87,6 @@ export class MonitorService {
 	private autotuneConsecutiveUnderperformanceCount: number = 0;
 	private autotuneVoltageIncreaseCount: Map<number, number> = new Map();
 	private autotuneVoltageIncreaseCapReached: boolean = false;
-	private autotuneOffLogged: boolean = false;
 	private flipFlopCount = 0;
 	private bestToExpected = -Infinity;
 	private bestVoltage = 0;
@@ -444,6 +443,18 @@ export class MonitorService {
 	}
 
 	private runAutotune(): void {
+		// Log temperature warnings - always check even during settle delay
+		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
+		const fmaxVr = this.settings.maxVr;
+
+		if (this.overallAverageAsicTemp > fmaxAsic) {
+			this.logMon(`[Autotune ] WARNING: ASIC temp ${this.overallAverageAsicTemp.toFixed(1)}°C exceeds max ${fmaxAsic.toFixed(2)}°C`);
+		}
+
+		if (this.overallAverageVrTemp > fmaxVr) {
+			this.logMon(`[Autotune ] WARNING: VR temp ${this.overallAverageVrTemp.toFixed(1)}°C exceeds max ${fmaxVr}°C`);
+		}
+
 		// If the stepDown value has changed since the last autotune cycle, we should reset autotune state to allow it to adapt to the new frequency range
 		if (this.state.stepDown !== this.lastStepDown) {
 			this.lastStepDown = this.state.stepDown;
@@ -456,7 +467,6 @@ export class MonitorService {
 			this.autotuneConsecutiveUnderperformanceCount = 0;
 			this.autotuneVoltageIncreaseCount.clear();
 			this.autotuneVoltageIncreaseCapReached = false;
-			this.autotuneOffLogged = false;
 			return;
 		}
 
@@ -520,17 +530,15 @@ export class MonitorService {
 			return;
 		}
 
+		// Display regular logging if we have reached the autotuneVoltageIncreaseCapReached for this frequency
+		if (this.autotuneVoltageIncreaseCapReached) {
+			this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Autotune off (voltage cap reached) - waiting for step change`);
+			this.changeMessage = `						`;
+			return;
+		}
+
 		// Eaxamine the toExpected value to determine whether we should increase, decrease, or maintain voltage
 		if (toExpected < 0) {	// toExpected < 0% increase voltage to improve hashrate as we are underperforming
-			if (this.autotuneVoltageIncreaseCapReached) {
-				if (!this.autotuneOffLogged) {
-					this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Autotune off until next step change`);
-					this.autotuneOffLogged = true;
-				}
-				this.changeMessage = `						`;
-				return;
-			}
-
 			this.autotuneConsecutiveUnderperformanceCount++;
 			this.autotuneStableCount = 0;
 
@@ -543,8 +551,7 @@ export class MonitorService {
 			const voltageIncreaseCount = this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0;
 			if (voltageIncreaseCount >= 3) {
 				this.autotuneVoltageIncreaseCapReached = true;
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/3) - Autotune off until next step change`);
-				this.autotuneOffLogged = true;
+				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/3) - Autotune off until step change`);
 				this.changeMessage = `						`;
 				this.autotuneConsecutiveUnderperformanceCount = 0;
 				return;
@@ -704,7 +711,7 @@ export class MonitorService {
 			if (status.temp > emergencyOverheat) {
 				if (this.state.drasticMeasureCounter >= this.drasticMeasureDelay) {
 					const oldStepDown = this.state.stepDown;
-					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical`);
+					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp critical [${status.temp.toFixed(1)}°C > ${emergencyOverheat}°C]`);
 					this.logMon(`[Drastic ] -------------------------------------------------------------`);
 					this.alterStepDownValue(-10, "[Drastic  ]");
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
@@ -718,7 +725,7 @@ export class MonitorService {
 				this.state.stepDownCounter--;
 				if (this.state.stepDownCounter < 0) {
 					const oldStepDown = this.state.stepDown;
-					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
+					this.logMon(`[Blocking ] Blocking step up to ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high (${status.avgAsicTemp.toFixed(1)}°C)`);
 					this.logMon(`[StepDownA] -------------------------------------------------------------`);
 					this.alterStepDownValue(-1, "[StepDownA]");
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
