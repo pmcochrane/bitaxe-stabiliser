@@ -550,21 +550,7 @@ export class MonitorService {
 				return;
 			}
 
-			if (this.overallAverageAsicTemp > this.settings.targetAsic - this.settings.asicTempTolerance) {
-				this.autotuneConsecutiveUnderperformanceCount = 0;
-				const fminAsicAutotune = this.settings.targetAsic - this.settings.asicTempTolerance;
-				this.logMon(`[DEBUG] Autotune ASIC check: ${this.overallAverageAsicTemp.toFixed(1)}°C > ${fminAsicAutotune.toFixed(2)}°C (targetAsic - tol)`);
-
-				this.stepDownBlocklist.set(this.state.stepDown, this.stepDownBlocklistDuration);
-				this.logMon(`[Blocking ] step ${this.state.stepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp`);
-
-				const oldStepDown = this.state.stepDown;
-				this.logMon(`[Autotune ] -------------------------------------------------------------`);
-				this.alterStepDownValue(-1, "[Autotune ]");
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Stepping down - ASIC temp too close to target: ${this.overallAverageAsicTemp.toFixed(1)}°C > ${(this.settings.targetAsic - this.settings.asicTempTolerance).toFixed(2)}°C`);
-				this.changeMessage = `						`;
-
-			} else if (currentVoltage < this.maxCoreVoltage) {
+			if (currentVoltage < this.maxCoreVoltage) {
 				currentVoltage += 5;
 				this.currentTunedVoltage = currentVoltage;
 				this.voltageMap.set(this.desiredFreq, currentVoltage);
@@ -702,10 +688,10 @@ export class MonitorService {
 			if (this.state.stepDownCounter < 0) {
 				const oldStepDown = this.state.stepDown;
 				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
-				this.logMon(`[Step Down] -------------------------------------------------------------`);
-				this.alterStepDownValue(-1, "[Step Down]");
+				this.logMon(`[StepDownV] -------------------------------------------------------------`);
+				this.alterStepDownValue(-1, "[StepDownV]");
 				this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-				this.changeMessage = `[Step Down] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
+				this.changeMessage = `[StepDownV] VR temp high: ${status.avgVrTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 			}
 
 			if (this.autotuneEnabled && this.currentTunedVoltage !== null && this.currentTunedVoltage < this.maxCoreVoltage) {
@@ -733,10 +719,10 @@ export class MonitorService {
 				if (this.state.stepDownCounter < 0) {
 					const oldStepDown = this.state.stepDown;
 					this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high`);
-					this.logMon(`[Step Down] -------------------------------------------------------------`);
-					this.alterStepDownValue(-1, "[Step Down]");
+					this.logMon(`[StepDownA] -------------------------------------------------------------`);
+					this.alterStepDownValue(-1, "[StepDownA]");
 					this.stepDownBlocklist.set(oldStepDown, this.stepDownBlocklistDuration);
-					this.changeMessage = `[Step Down] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
+					this.changeMessage = `[StepDownA] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 				}
 			}
 			this.state.reachedInitialTemp = true;
