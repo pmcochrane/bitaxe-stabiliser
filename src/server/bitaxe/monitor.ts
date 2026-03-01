@@ -60,6 +60,7 @@ export class MonitorService {
 		this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.state.stepDownSettleCounter = this.stepDownSettleDelay;
 		this.autotuneSettleDelayCounter = this.autotuneEveryXcycles;
+		this.hasSavedForCurrentStep = false;
 	}
 
 	private maxSweepSteps = 24;
@@ -99,6 +100,7 @@ export class MonitorService {
 	private autotuneSettleDelayCounter = 0;
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
+	private hasSavedForCurrentStep = false;
 
 	constructor(settings: Settings, store: DataStore, autotuneOptions?: AutotuneOptions) {
 		this.settings = settings;
@@ -360,10 +362,6 @@ export class MonitorService {
 				this.minHashRate = this.overallAverageHashRate;
 				this.maxHashRate = this.overallAverageHashRate;
 			}
-
-			if (this.state.sweepMode) {
-				this.waitForStabilization();
-			}
 		}
 
 		if (info.temp > 30) {
@@ -575,7 +573,7 @@ export class MonitorService {
 				const newIncreaseCount = (this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0) + 1;
 				this.autotuneVoltageIncreaseCount.set(this.desiredFreq, newIncreaseCount);
 				this.autotuneConsecutiveUnderperformanceCount = 0;
-				this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - 5}mv			Increasing voltage to ${currentVoltage}mV (${newIncreaseCount}/3)`)
+				this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - 5}mv			Increasing voltage to ${currentVoltage}mV [${newIncreaseCount}/3]`)
 				this.changeMessage = `						`;
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 
@@ -605,6 +603,9 @@ export class MonitorService {
 
 		} else {	// toExpected >=0 && <=1 - keep the same voltage
 			this.autotuneConsecutiveUnderperformanceCount = 0;
+			if (this.bestVoltage === 0) {
+				this.bestVoltage = this.currentTunedVoltage ?? this.voltageMap.get(this.desiredFreq) ?? this.settings.coreVoltage;
+			}
 			currentVoltage = this.bestVoltage;
 			this.currentTunedVoltage = currentVoltage;
 			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
@@ -631,7 +632,7 @@ export class MonitorService {
 		const hasTunedVoltage = this.currentTunedVoltage !== null &&
 			Math.abs(this.desiredFreq - this.state.lastFrequencyApplied) < 1;
 
-		let baseVoltage = storedVoltage ?? this.settings.coreVoltage;
+		let baseVoltage = storedVoltage ?? baselineVoltage ?? this.settings.coreVoltage;
 		let voltageSource = hasStoredVoltage ? '[Stored] ' : '';
 
 		if (hasTunedVoltage && this.currentTunedVoltage !== null) {
@@ -671,10 +672,6 @@ export class MonitorService {
 		this.state.stepUpCounter = this.stepUpEveryXPasses;
 		this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.applyChange = false;
-	}
-
-	private waitForStabilization(): void {
-		return;
 	}
 
 	private evaluateAndAdjust(status: BitaxeStatus): void {
@@ -811,8 +808,9 @@ export class MonitorService {
 					this.changeMessage = `[Sweep Up ] [${this.sweepIterationsCounter}/${this.sweepIterations}] Sweep increment: Step ${oldStepDown}->${this.state.stepDown}`;
 				}
 			}
-			if (this.sweepIterationsCounter >= 20) {
+			if (this.sweepIterationsCounter >= 20 && !this.hasSavedForCurrentStep) {
 				this.saveHashrange();
+				this.hasSavedForCurrentStep = true;
 			}
 		}
 	}
