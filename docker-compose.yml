@@ -15,6 +15,13 @@ x-base: &base               # ← note the x- prefix
       # - MAX_FREQ=${MAX_FREQ:-525.0}
       # - STEP_DOWN_DEFAULT=${STEP_DOWN_DEFAULT:- -10}
   restart: unless-stopped
+  logging:                  # ← add this block
+    driver: "json-file"     # usually optional (it's the default), but good to be explicit
+    options:
+      max-size: "10m"       # each individual log file max 10 MB (before rotation)
+      max-file: "5"         # keep 5 files total → oldest gets deleted automatically
+                             # → total log disk usage per container ≈ 50 MB max
+  
 
 services:
   # Config for bitaxe device 1
