@@ -25,9 +25,10 @@ export class MonitorService {
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
-	private stepUpEveryXPasses = 90;
+	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
+	private autotuneReversalThreshold = 0.05;	// the minimum change in toExpected required to consider a change in direction as a reversal, helps to prevent overreacting to minor fluctuations which may not indicate a real change in trend
+	private stepUpEveryXPasses = ((this.autotuneEveryXcycles+1)*3)+1;
 	private stepDownEveryXPasses = 2;
-	private stabilisedCounterDefault = 15;
 	private drasticMeasureDelay = 3;
 	private stepDownSettleDelay = 5;
 	private voltageOverheatReduction = 5;
@@ -51,8 +52,6 @@ export class MonitorService {
 	private autoAdjustFreq = true;
 
 	private autotuneEnabled = false;
-	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
-	private autotuneReversalThreshold = 0.05;	// the minimum change in toExpected required to consider a change in direction as a reversal, helps to prevent overreacting to minor fluctuations which may not indicate a real change in trend
 	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
@@ -111,7 +110,7 @@ export class MonitorService {
 		this.client = new BitaxeClient(settings.ip);
 
 		if (autotuneOptions) {
-			this.autotuneEnabled = autotuneOptions.autotuneEnabled;
+			this.autotuneEnabled = autotuneOptions.autotuneEnabled ? true : false;
 			this.maxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			this.initialMaxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			this.autotuneReversalThreshold = autotuneOptions.autotuneReversalThreshold ?? 0.1;
@@ -127,8 +126,6 @@ export class MonitorService {
 			stepDown: settings.stepDownDefault ?? -10,
 			stepUpCounter: this.stepUpEveryXPasses,
 			stepDownCounter: this.stepDownEveryXPasses,
-			stabilisedCounter: this.stabilisedCounterDefault,
-			reachedInitialTemp: false,
 			lastFrequencyApplied: 0,
 			lastCoreVoltageApplied: 0,
 			drasticMeasureCounter: this.drasticMeasureDelay,
@@ -183,8 +180,6 @@ export class MonitorService {
 		this.changeMessage = 'Starting monitor service...';
 		this.applyChange = true;
 		this.state.stepDown = this.settings.stepDownDefault ?? -10;
-		this.state.stabilisedCounter = this.stabilisedCounterDefault;
-		this.state.reachedInitialTemp = false;
 		this.state.stepDownSettleCounter = 0;
 		this.autotuneSettleDelayCounter = 0;
 		this.asicTemps = [];
@@ -195,7 +190,6 @@ export class MonitorService {
 		this.stepDownBlocklist.clear();
 
 		this.runLoop();
-
 	}
 
 	stop(): void {
@@ -214,7 +208,7 @@ export class MonitorService {
 	private logMon(message: string): void {
 		logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
 			+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]`
-			+`[${this.state.stepUpCounter} ${this.state.stepDownCounter} ${this.state.stabilisedCounter}]`
+			+`[${this.state.stepUpCounter} ${this.state.stepDownCounter}]`
 			+`	${message}`);
 	}
 
@@ -740,10 +734,10 @@ export class MonitorService {
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
 		this.appliedCoreVoltage = adjustedVoltage;
-		this.state.lastFrequencyApplied = this.desiredFreq;
 		this.state.lastCoreVoltageApplied = adjustedVoltage;
-		this.state.stepUpCounter = this.stepUpEveryXPasses;
-		this.state.stepDownCounter = this.stepDownEveryXPasses;
+		this.state.lastFrequencyApplied = this.desiredFreq;
+		// this.state.stepUpCounter = this.stepUpEveryXPasses;
+		// this.state.stepDownCounter = this.stepDownEveryXPasses;
 		this.applyChange = false;
 	}
 
@@ -771,7 +765,6 @@ export class MonitorService {
 
 		if (status.avgVrTemp > fmaxVr && this.autoAdjustFreq && this.state.stepDownSettleCounter <= 0) {
 			this.logMon(`[DEBUG] VR temp check: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C (maxVr)`);
-			this.state.stepDownCounter--;
 			if (this.state.stepDownCounter < 0) {
 				const oldStepDown = this.state.stepDown;
 				this.logMon(`[Blocking ] step ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to VR temp`);
@@ -787,7 +780,9 @@ export class MonitorService {
 				this.changeMessage = `						`;
 			}
 		} else if (status.avgAsicTemp > fmaxAsic && this.autoAdjustFreq && this.state.stepDownSettleCounter <= 0) {
-			// this.logMon(`[DEBUG] ASIC temp check: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic.toFixed(2)}°C (fmaxAsic) | targetAsic=${this.settings.targetAsic}°C tol=${this.settings.asicTempTolerance}°C`);
+			if (this.state.stepDownCounter >= 0) {
+				this.state.stepDownCounter--;
+			}
 			if (status.temp > emergencyOverheat) {
 				if (this.state.drasticMeasureCounter >= this.drasticMeasureDelay) {
 					const oldStepDown = this.state.stepDown;
@@ -802,7 +797,6 @@ export class MonitorService {
 				}
 			} else {
 				this.state.drasticMeasureCounter = 0;
-				this.state.stepDownCounter--;
 				if (this.state.stepDownCounter < 0) {
 					const oldStepDown = this.state.stepDown;
 					this.logMon(`[Blocking ] Blocking step up to ${oldStepDown} for ${this.stepDownBlocklistDuration} cycles due to ASIC temp high (${status.avgAsicTemp.toFixed(1)}°C)`);
@@ -812,12 +806,13 @@ export class MonitorService {
 					this.changeMessage = `[StepDownA] ASIC temp high: ${status.avgAsicTemp.toFixed(1)}°C\tStep Down ${oldStepDown}->${this.state.stepDown}`;
 				}
 			}
-			this.state.reachedInitialTemp = true;
-		} else if (status.avgAsicTemp < fminAsic && this.autoAdjustFreq && this.state.reachedInitialTemp) {
+		} else if (status.avgAsicTemp < fminAsic && this.autoAdjustFreq) {
 			if (this.state.stepDown < this.maxStepUp) {
 				const targetStep = this.state.stepDown + 1;
 				if (!this.stepDownBlocklist.has(targetStep)) {
-					this.state.stepUpCounter--;
+					if (this.state.stepUpCounter >= 0) {
+						this.state.stepUpCounter--;
+					}
 					if (this.state.stepUpCounter < 0) {
 						const oldStepDown = this.state.stepDown;
 						this.state.stepDown++;
@@ -834,13 +829,6 @@ export class MonitorService {
 					// logMonitor(`[${this.iteration}] [Blocked ] Step up to ${targetStep} blocked by blocklist (${this.stepDownBlocklist.get(targetStep)} cycles remaining)`);
 					this.state.stepUpCounter = this.stepUpEveryXPasses;
 				}
-			}
-		}
-
-		if (this.state.stabilisedCounter) {
-			this.state.stabilisedCounter--;
-			if (this.state.stabilisedCounter < 0) {
-				this.state.reachedInitialTemp = true;
 			}
 		}
 

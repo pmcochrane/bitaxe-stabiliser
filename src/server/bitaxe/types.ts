@@ -119,8 +119,6 @@ export interface MonitorState {
 	stepDown: number;
 	stepUpCounter: number;
 	stepDownCounter: number;
-	stabilisedCounter: number;
-	reachedInitialTemp: boolean;
 	lastFrequencyApplied: number;
 	lastCoreVoltageApplied: number;
 	drasticMeasureCounter: number;
