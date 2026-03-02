@@ -16,6 +16,7 @@ export class MonitorService {
 	private state: MonitorState;
 	private store: DataStore;
 	private intervalId: NodeJS.Timeout | null = null;
+	private loopStartTime = 0;
 	private iteration = 0;
 	private applyChange = true;
 	private changeMessage = '';
@@ -118,6 +119,7 @@ export class MonitorService {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
 		}
+		this.autotuneEnabled = false;
 
 		this.state = {
 			running: false,
@@ -147,6 +149,8 @@ export class MonitorService {
 			const frequency = settings.maxFreq ?? this.settings.maxFreq;
 			const coreVoltage = settings.coreVoltage ?? this.settings.coreVoltage;
 			this.client.setSystemSettings(frequency, coreVoltage);
+			this.appliedCoreVoltage = coreVoltage;
+			this.applyChange = true;
 		}
 	}
 
@@ -300,6 +304,7 @@ export class MonitorService {
 	}
 
 	private runLoop(): void {
+		this.loopStartTime = Date.now();
 		this.iteration++;
 
 		if (this.autotuneIncreasedVoltageCounter > 0) {
@@ -344,7 +349,9 @@ export class MonitorService {
 	}
 
 	private scheduleNext(): void {
-		this.intervalId = setTimeout(() => this.runLoop(), this.secondsBetweenPasses * 1000);
+		const targetTime = this.loopStartTime + this.secondsBetweenPasses * 1000;
+		const delay = Math.max(0, targetTime - Date.now());
+		this.intervalId = setTimeout(() => this.runLoop(), delay);
 	}
 
 	private processReading(info: BitaxeSystemInfo): BitaxeStatus | null {
@@ -746,6 +753,8 @@ export class MonitorService {
 		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
 		const fmaxVr = this.settings.maxVr;
 		const emergencyOverheat = this.settings.targetAsic + 2;
+
+		this.logMon(`[DEBUG] EvaluateAndAdjust`);
 
 		if (status.overheatMode) {
 			this.changeMessage = 'Overheat mode detected!';
