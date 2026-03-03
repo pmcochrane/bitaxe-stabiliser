@@ -60,17 +60,8 @@ export class MonitorService {
 
 	private autotuneEnabled = true;
 	private autotuneStrategy: AutotuneStrategy = 'byVoltage'; //'hashrate';
-	private autotuneFlipFlop: { voltage: number; toExpected: number; toExpectedDirection: number }[] = [];
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
-	private autotuneConsecutiveUnderperformanceCount: number = 0;
-	private autotuneVoltageIncreaseCount: Map<number, number> = new Map();
-	private autotuneVoltageIncreaseCapReached: boolean = false;
-	private flipFlopCount = 0;
-	private bestToExpected = -Infinity;
-	private bestVoltage = 0;
-	private autotunePreviousToExpected: number | null = null;
-	private autotuneVoltageDirection: 'increasing' | 'decreasing' | null = null;
 	private autotuneSettleDelayCounter = 0;
 	private autotunePreventIncreaseDelayCounter = 0;
 
@@ -78,7 +69,7 @@ export class MonitorService {
 	private stepDownBlocklistDuration = 150;
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
-	private lastStepDown: number | null = null;
+	// private lastStepDown: number | null = null;
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
 	private hasSavedForCurrentStep = false;
@@ -124,7 +115,7 @@ export class MonitorService {
 			this.autotuneStrategy = autotuneOptions.autotuneStrategy ?? 'hashrate';
 			this.maxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			this.initialMaxCoreVoltage = autotuneOptions.maxCoreVoltage;
-			this.autotuneReversalThreshold = autotuneOptions.autotuneReversalThreshold ?? 0.1;
+			// this.autotuneReversalThreshold = autotuneOptions.autotuneReversalThreshold ?? 0.1;
 			for (const entry of autotuneOptions.voltageMap) {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
@@ -488,11 +479,11 @@ export class MonitorService {
 	// Auto tune strategy: adjust coreVoltage on a set frequency to align ASIC and VR temperatures with target values, while also considering the hashrate performance relative to expected. 
 	// This strategy is designed to find the optimal voltage for a given frequency that keeps temperatures in check while maximizing hashrate.
 	private runAutotuneByVoltage(): void {
-		if (this.state.stepDown !== this.lastStepDown) {
-			this.lastStepDown = this.state.stepDown;
-			this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
-			return;
-		}
+		// if (this.state.stepDown !== this.lastStepDown) {
+		// 	this.lastStepDown = this.state.stepDown;
+		// 	this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
+		// 	return;
+		// }
 
 		// Decrement the prevent further voltage increase counter if required
 		if (this.autotunePreventIncreaseDelayCounter > 0) {
@@ -741,8 +732,6 @@ export class MonitorService {
 				this.voltageMap.set(this.desiredFreq, throttleVoltage);
 				this.applyChange = true;
 				this.autotuneSettleDelayCounter = this.autotuneEveryXcycles * 2;
-				this.bestToExpected = -Infinity;
-				this.bestVoltage = 0;
 				this.logMon(`[Sweep  !  ] [${this.sweepIterationsCounter}/${this.sweepIterations}] Temp limit exceeded! VR: ${status.avgVrTemp.toFixed(1)}°C > ${fmaxVr}°C or ASIC: ${status.avgAsicTemp.toFixed(1)}°C > ${fmaxAsic}°C. Throttling voltage to ${throttleVoltage}mV`);
 			}
 

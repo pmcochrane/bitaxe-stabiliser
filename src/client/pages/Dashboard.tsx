@@ -25,6 +25,7 @@ interface GraphDataEntry {
 	a: number;
 	v: number;
 	s: number;
+	c: number;
 }
 
 export default function Dashboard() {
@@ -147,12 +148,20 @@ export default function Dashboard() {
 							a: entry.temp,
 							v: entry.vrTemp,
 							s: entry.stepDown,
+							c: entry.coreVoltage2 || 0,
 						}));
 						localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
 					} else if (typeof first.t === 'number' && first.t > 1e12) {
 						allData = parsed.map((entry: any) => ({
 							...entry,
 							t: Math.floor(entry.t / 1000),
+							c: entry.c || 0,
+						}));
+						localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
+					} else if (!('c' in first)) {
+						allData = parsed.map((entry: any) => ({
+							...entry,
+							c: 0,
 						}));
 						localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(allData));
 					}
@@ -174,7 +183,7 @@ export default function Dashboard() {
 			let prevKey: string | null = null;
 			let dropped = 0;
 			for (const entry of sorted) {
-				const key = `${entry.a}_${entry.v}_${entry.s}`;
+				const key = `${entry.a}_${entry.v}_${entry.s}_${entry.c}`;
 				if (key !== prevKey) {
 					deduped.push(entry);
 					prevKey = key;
@@ -333,6 +342,7 @@ export default function Dashboard() {
 					a: d.temp,
 					v: d.vrTemp,
 					s: d.stepDown,
+					c: d.coreVoltage2,
 				}));
 
 				let mergedData: GraphDataEntry[];
@@ -1209,6 +1219,15 @@ export default function Dashboard() {
 									tick={{ fontSize: 12 }}
 									label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#22c55e' }}
 								/>
+								<YAxis
+									yAxisId="voltage"
+									orientation="right"
+									domain={[(dataMin: number) => Math.max(0, dataMin - 50), (dataMax: number) => dataMax + 50]}
+									stroke="#006400"
+									tick={{ fontSize: 12, fill: '#006400' }}
+									tickFormatter={(value) => Math.round(value).toString()}
+									label={{ value: 'mV', angle: 0, position: 'right', offset: -10, fill: '#006400' }}
+								/>
 								<Tooltip
 									contentStyle={{
 										backgroundColor: isDarkMode ? '#1f2937' : '#fff',
@@ -1230,6 +1249,8 @@ export default function Dashboard() {
 								<Line yAxisId="temp" type="monotone" dataKey="v" name="VR Temp (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.vrTemp} />
 								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c2410c" strokeDasharray="3 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#c2410c', fontSize: 20, position: 'bottom', offset: 5 }} />}
 								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={settingsForm.maxVr} stroke="#f97316" strokeDasharray="15 5" label={{ value: 'Max VR:'+settingsForm.maxVr+"°C", fill: '#f97316', fontSize: 20, position: 'top', offset: 5 }} />}
+								
+								<Line yAxisId="voltage" type="monotone" dataKey="c" name="Core Voltage (mV)" stroke="#006400" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
 								
 							</ComposedChart>
 						</ResponsiveContainer>
