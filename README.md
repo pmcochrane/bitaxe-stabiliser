@@ -139,6 +139,7 @@ There are other environment variables that can be set in your `docker-compose.ym
 | MAX_FREQ | Max frequency (MHz) | Normally inherits current bitaxe setting (else 525) |
 | MAX_COREVOLTAGE | Max core voltage for autotune (mV) | 1450 |
 | AUTOTUNE_COREVOLTAGE | Enable autotune voltage optimization | true |
+| AUTOTUNE_STRATEGY | Autotune strategy: 'hashrate' (optimize hashrate) or 'byVoltage' (control temp) | hashrate |
 | PORT | Server port | 3000 |
 | HISTORY_LIMIT | Max history entries | 172800 (2 days worth of data) |
 | STEP_DOWN_DEFAULT | Default Stepdown value | Default 0: frequency will start at target with no stepdown on starting server |
