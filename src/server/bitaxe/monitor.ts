@@ -530,7 +530,7 @@ export class MonitorService {
 		let voltageChanged = false;
 
 		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%]`;
-		// const toExpectedString='';
+
 		if (this.overallAverageVrTemp > fmaxVr) {
 			newVoltage = Math.max(700, currentVoltage - 10);
 			this.changeMessage += `[Autotune-]${toExpectedString}VR (Too High)	${vrDiff.toFixed(2)}°C	Reducing `;
