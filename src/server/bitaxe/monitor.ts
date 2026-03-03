@@ -32,6 +32,7 @@ export class MonitorService {
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
+	private autotuneVoltageEveryXcycles = 5;	// Autotune by voltage adjusts every 5 cycles
 	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
 	private autotuneReversalThreshold = 0.05;	// the minimum change in toExpected required to consider a change in direction as a reversal, helps to prevent overreacting to minor fluctuations which may not indicate a real change in trend
 	private stepUpEveryXPasses = ((this.autotuneEveryXcycles+1)*3)+1;
@@ -495,10 +496,9 @@ export class MonitorService {
 	// Auto tune strategy: adjust coreVoltage on a set frequency to align ASIC and VR temperatures with target values, while also considering the hashrate performance relative to expected. 
 	// This strategy is designed to find the optimal voltage for a given frequency that keeps temperatures in check while maximizing hashrate.
 	private runAutotuneByVoltage(): void {
-		const autotuneRunEveryYcycles = 5;
 		if (this.state.stepDown !== this.lastStepDown) {
 			this.lastStepDown = this.state.stepDown;
-			this.autotuneSettleDelayCounter = autotuneRunEveryYcycles;
+			this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
 			return;
 		}
 
@@ -507,13 +507,12 @@ export class MonitorService {
 			this.autotunePreventIncreaseDelayCounter--;
 		}
 
-		// Run autotune every 5 cycles to allow time for changes to take effect and be measured
+		// Only run autotune every 5 cycles to allow time for changes to take effect and be measured
 		if (this.autotuneSettleDelayCounter > 0) {
 			this.autotuneSettleDelayCounter--;
 			return;
 		}
-		this.autotuneSettleDelayCounter = autotuneRunEveryYcycles;
-
+		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
 
 		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
 		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
@@ -521,28 +520,38 @@ export class MonitorService {
 		const asicDiff= this.overallAverageAsicTemp - this.settings.targetAsic;
 		const vrDiff = this.overallAverageVrTemp - fmaxVr;
 
-		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
-			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
-			: 0;
 
 		const currentVoltage = this.currentTunedVoltage ?? this.appliedCoreVoltage ?? this.settings.coreVoltage;
 		let newVoltage = currentVoltage;
 		let voltageChanged = false;
 
+		// Calculate how far we are from the expected hashrate as a percentage, to use as context in decision making and logging
+		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
+			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
+			: 0;
 		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%]`;
+
+		// Decide if we have hit point to consider changing frequency based on how far we are from expected hashrate, 
+		// but only if we have been stable for at least 20 cycles to allow time for accurate measurement and prevent overreacting to temporary fluctuations
+		let freqChangeString = '';
+		if (toExpected > 1 && this.autotuneStableCount>20) {
+			freqChangeString = '	-> Scale Frequency Up';
+		} else if (toExpected < 3 && this.autotuneStableCount>20) {
+			freqChangeString = '	-> Scale Frequency Down';
+		}
 
 		if (this.overallAverageVrTemp > fmaxVr) {
 			newVoltage = Math.max(700, currentVoltage - 10);
 			this.changeMessage += `[Autotune-]${toExpectedString}VR (Too High)	${vrDiff.toFixed(2)}°C	Reducing `;
 			voltageChanged = true;
-			this.autotunePreventIncreaseDelayCounter = autotuneRunEveryYcycles*6;
+			this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;
 			this.autotuneStableCount = 0;
 
 		} else if (this.overallAverageAsicTemp > fmaxAsic) {
 			newVoltage = Math.max(700, currentVoltage - 5);
 			this.changeMessage += `[Autotune-]${toExpectedString} ASIC (Too High)	${asicDiff.toFixed(2)}°C	Reducing `;
 			voltageChanged = true;
-			this.autotunePreventIncreaseDelayCounter = 30;
+			this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 			this.autotuneStableCount = 0;
 
 		} else if (this.overallAverageAsicTemp < fminAsic) {
@@ -550,7 +559,7 @@ export class MonitorService {
 				newVoltage = Math.min(this.maxCoreVoltage, currentVoltage + 5);
 				this.changeMessage += `[Autotune+]${toExpectedString} ASIC (Too Low)	${asicDiff.toFixed(2)}°C	Increasing`;
 				voltageChanged = true;
-				this.autotunePreventIncreaseDelayCounter = autotuneRunEveryYcycles*4; // prevent increasing voltage again to allow change to take effect and be averaged out
+				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*4;	// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 			} else {	
 				this.logMon(`[Blocked  ] [Autotune ]${toExpectedString} ASIC (Too Low)	${asicDiff.toFixed(2)}°C	----------`);
@@ -558,10 +567,10 @@ export class MonitorService {
 			}
 		} else {
 			this.autotuneStableCount++;
-			this.logMon(`[STABLE   ] [Autotune=]${toExpectedString} ASIC (In Range)	${asicDiff.toFixed(2)}°C  Stable (${this.autotuneStableCount}/5)`);
-			if (this.autotuneStableCount >= 5) {
+			const saved = [5, 10, 15,20].indexOf(this.autotuneStableCount)>=0 ? '	(Saved)' : '';
+			this.logMon(`[STABLE   ] [Autotune=]${toExpectedString} ASIC (In Range)	${asicDiff.toFixed(2)}°C  Stable for ${this.autotuneStableCount}${saved}${freqChangeString}`);
+			if (saved!=='') { // Store stable values to voltage.json for recall
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-				this.autotuneStableCount = 0;
 			}
 		}
 
