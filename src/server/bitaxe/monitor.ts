@@ -34,7 +34,6 @@ export class MonitorService {
 	private secondsBetweenPasses = 1;
 	private autotuneVoltageEveryXcycles = 5;	// Autotune by voltage adjusts every 5 cycles
 	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
-	private autotuneReversalThreshold = 0.05;	// the minimum change in toExpected required to consider a change in direction as a reversal, helps to prevent overreacting to minor fluctuations which may not indicate a real change in trend
 	private stepUpEveryXPasses = ((this.autotuneEveryXcycles+1)*3)+1;
 	private stepDownEveryXPasses = 2;
 	private drasticMeasureDelay = 3;
@@ -466,11 +465,6 @@ export class MonitorService {
 		};
 	}
 
-	private average(numbers: number[]): number {
-		if (numbers.length === 0) return 0;
-		return Math.round((numbers.reduce((a, b) => a + b, 0) / numbers.length) * 100) / 100;
-	}
-
 	private reduceStoredVoltage(logPrefix: string, frequency: number, oldStepDown: number): boolean {
 		const currentVoltage = this.voltageMap.get(frequency);
 		if (currentVoltage === undefined || currentVoltage <= 700) {
@@ -488,8 +482,6 @@ export class MonitorService {
 	private runAutotune(): void {
 		if (this.autotuneStrategy === 'byVoltage') {
 			this.runAutotuneByVoltage();
-		} else {
-			this.runAutotuneByHashrate();
 		}
 	}
 
@@ -578,235 +570,6 @@ export class MonitorService {
 			this.currentTunedVoltage = newVoltage;
 			this.voltageMap.set(this.desiredFreq, newVoltage);
 			this.applyChange = true;
-		}
-	}
-
-	private runAutotuneByHashrate(): void {
-		// Log temperature warnings - always check even during settle delay
-		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
-		const fmaxVr = this.settings.maxVr;
-
-		if (this.overallAverageAsicTemp > fmaxAsic) {
-			this.logMon(`[Autotune ] WARNING: ASIC temp ${this.overallAverageAsicTemp.toFixed(1)}°C exceeds max ${fmaxAsic.toFixed(2)}°C`);
-		}
-
-		if (this.overallAverageVrTemp > fmaxVr) {
-			this.logMon(`[Autotune ] WARNING: VR temp ${this.overallAverageVrTemp.toFixed(1)}°C exceeds max ${fmaxVr}°C`);
-		}
-
-		// If the stepDown value has changed since the last autotune cycle, we should reset autotune state to allow it to adapt to the new frequency range
-		if (this.state.stepDown !== this.lastStepDown) {
-			this.lastStepDown = this.state.stepDown;
-			this.autotuneSettleDelayCounter = this.autotuneEveryXcycles;
-			this.currentTunedVoltage = null;
-			this.autotuneFlipFlop = [];
-			this.flipFlopCount = 0;
-			this.bestToExpected = -Infinity;
-			this.bestVoltage = 0;
-			this.autotuneConsecutiveUnderperformanceCount = 0;
-			this.autotuneVoltageIncreaseCount.clear();
-			this.autotuneVoltageIncreaseCapReached = false;
-			this.autotunePreviousToExpected = null;
-			this.autotuneVoltageDirection = null;
-			return;
-		}
-
-		// If we recently changed the stepDown value, we should wait for a few cycles before allowing autotune to make further adjustments
-		if (this.autotuneSettleDelayCounter > 0) {
-			this.autotuneSettleDelayCounter--;
-			return;
-		}
-		// only do autotune every X cycles to allow time for changes to take effect and be measured
-		this.autotuneSettleDelayCounter = this.autotuneEveryXcycles; 
-
-		const baseline = this.baselineVoltages.get(this.desiredFreq) ?? this.settings.coreVoltage;
-		let currentVoltage = this.currentTunedVoltage ?? this.voltageMap.get(this.desiredFreq) ?? baseline;
-
-		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
-			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
-			: 0;
-
-		const localPreviousToExpected = this.autotunePreviousToExpected;
-
-		if (toExpected > this.bestToExpected) {
-			this.bestToExpected = toExpected;
-			this.bestVoltage = currentVoltage;
-		}
-
-		// Flip-flop detection - if we see the toExpected value change direction (positive to negative or vice versa) multiple times in a row, it may indicate that we are hovering around an unstable point. 
-		// In this case, we can select the best voltage observed so far to try to stabilise the system
-		const flipFlopEntry = { voltage: currentVoltage, toExpected, toExpectedDirection: 0 };
-		const lastEntry = this.autotuneFlipFlop[this.autotuneFlipFlop.length - 1];
-		const toExpectedDirection = toExpected > 0 ? 1 : -1;
-		flipFlopEntry.toExpectedDirection = toExpectedDirection;
-		if (lastEntry) {
-			this.autotuneFlipFlop.push(flipFlopEntry);
-			if (this.autotuneFlipFlop.length > 2) {
-				this.autotuneFlipFlop.shift();
-			}
-
-			if (lastEntry.toExpectedDirection !== 0 && toExpectedDirection !== lastEntry.toExpectedDirection) {
-				this.flipFlopCount++;
-			}
-		} else {
-			this.autotuneFlipFlop.push(flipFlopEntry);
-		}
-		if (this.flipFlopCount >= 3) {
-			currentVoltage = this.bestVoltage;
-			this.currentTunedVoltage = currentVoltage;
-			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%					Flip-flop detected! Selected best ${currentVoltage}mV`);
-			this.changeMessage = `						`;
-			this.autotuneFlipFlop = [];
-			this.flipFlopCount = 0;
-			this.bestToExpected = -Infinity;
-			this.bestVoltage = 0;
-			this.autotuneStableCount = 0;
-			return;
-		}
-
-		// If we've been stable for 4+ cycles, stop adjusting and preserve the working voltage
-		if (this.autotuneStableCount >= 4) {
-			this.logMon(`[Autotune=] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage}mV			Stable - preserving voltage (${this.autotuneStableCount} cycles)`);
-			this.changeMessage = `						`;
-			return;
-		}
-
-		// Display regular logging if we have reached the autotuneVoltageIncreaseCapReached for this frequency
-		if (this.autotuneVoltageIncreaseCapReached) {
-			this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Autotune off (voltage cap reached) - waiting for step change`);
-			this.changeMessage = `						`;
-			return;
-		}
-
-		// Eaxamine the toExpected value to determine whether we should increase, decrease, or maintain voltage
-		let currentDirection: 'increasing' | 'decreasing' | null = null;
-		if (localPreviousToExpected !== null) {
-			const diff = toExpected - localPreviousToExpected;
-			if (Math.abs(diff) > this.autotuneReversalThreshold) {
-				if (diff > 0) {
-					currentDirection = 'increasing';
-				} else {
-					currentDirection = 'decreasing';
-				}
-			}
-		}
-
-		const isReversing = currentDirection !== null &&
-			this.autotuneVoltageDirection !== null &&
-			currentDirection !== this.autotuneVoltageDirection;
-
-		const requiredDirection = toExpected < 0 ? 'increasing' : 'decreasing';
-		const voltageChangeAmount = 5;
-		
-		let actualDirection: 'increasing' | 'decreasing';
-		if (isReversing) {
-			actualDirection = requiredDirection === 'increasing' ? 'decreasing' : 'increasing';
-		} else {
-			actualDirection = requiredDirection;
-		}
-		this.autotuneVoltageDirection = actualDirection;
-
-		if (toExpected < 0) {	// toExpected < 0% increase voltage to improve hashrate as we are underperforming
-			this.autotuneConsecutiveUnderperformanceCount++;
-			this.autotuneStableCount = 0;
-
-			if (this.autotuneConsecutiveUnderperformanceCount < 3) {
-				this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Underperformance (${this.autotuneConsecutiveUnderperformanceCount}/3)`);
-				this.changeMessage = `						`;
-				return;
-			}
-
-			// const voltageIncreaseCount = this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0;
-			// if (voltageIncreaseCount >= 10) {
-			// 	this.autotuneVoltageIncreaseCapReached = true;
-			// 	this.logMon(`[Autotune ] toExpected: ${toExpected.toFixed(2)}%					Max voltage increases reached (${voltageIncreaseCount}/5) - Autotune off until step change`);
-			// 	this.changeMessage = `						`;
-			// 	this.autotuneConsecutiveUnderperformanceCount = 0;
-			// 	return;
-			// }
-
-			if (currentVoltage < this.maxCoreVoltage) {
-				this.autotuneConsecutiveUnderperformanceCount = 0;
-				this.autotuneIncreasedVoltageCounter = this.autotuneEveryXcycles + 1;
-				this.autotunePreviousToExpected = toExpected;
-
-				if (actualDirection === 'increasing') {
-					const newIncreaseCount = (this.autotuneVoltageIncreaseCount.get(this.desiredFreq) ?? 0) + 1;
-					this.autotuneVoltageIncreaseCount.set(this.desiredFreq, newIncreaseCount);
-					currentVoltage += voltageChangeAmount;
-					this.currentTunedVoltage = currentVoltage;
-					this.voltageMap.set(this.desiredFreq, currentVoltage);
-					this.logMon(`[Autotune+] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - voltageChangeAmount}mv			Increasing voltage to ${currentVoltage}mV [${newIncreaseCount}/5]`)
-				} else {
-					currentVoltage -= voltageChangeAmount;
-					this.currentTunedVoltage = currentVoltage;
-					this.voltageMap.set(this.desiredFreq, currentVoltage);
-					this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + voltageChangeAmount}mv			Direction reversed - decreasing voltage to ${currentVoltage}mV`)
-				}
-				this.changeMessage = `						`;
-				this.applyChange = true;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-
-			} else {
-				currentVoltage = this.bestVoltage;
-				this.currentTunedVoltage = currentVoltage;
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Max voltage reached (no change)`);
-				this.changeMessage = `						`;
-				this.bestToExpected = -Infinity;
-				this.bestVoltage = 0;
-			}
-			
-		} else if (toExpected > 1) { 	// toExpected > 1%  decrease voltage to save power and reduce temps as over efficient
-			this.autotuneConsecutiveUnderperformanceCount = 0;
-
-			const canDecrease = (currentVoltage - 5) >= 700;
-			const canIncrease = (currentVoltage + voltageChangeAmount) <= this.maxCoreVoltage;
-
-			if (actualDirection === 'decreasing' && canDecrease) {
-				this.autotunePreviousToExpected = toExpected;
-				this.changeMessage = `						`;
-				this.applyChange = true;
-				currentVoltage -= voltageChangeAmount;
-				this.currentTunedVoltage = currentVoltage;
-				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + voltageChangeAmount}mv			Decreasing voltage to ${currentVoltage}mV`);
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-			} else if (actualDirection === 'increasing' && canIncrease) {
-				this.autotunePreviousToExpected = toExpected;
-				this.changeMessage = `						`;
-				this.applyChange = true;
-				currentVoltage += voltageChangeAmount;
-				this.currentTunedVoltage = currentVoltage;
-				this.voltageMap.set(this.desiredFreq, currentVoltage);
-				this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage - voltageChangeAmount}mv			Direction reversed - increasing voltage to ${currentVoltage}mV`);
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-			} else if (actualDirection === 'decreasing' && !canDecrease) {
-				this.logMon(`[Autotune-] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage + 5}mv			Minimum voltage so no change`);
-				this.changeMessage = `						`;
-			} else if (actualDirection === 'increasing' && !canIncrease) {
-				this.logMon(`[Autotune↔] toExpected: ${toExpected.toFixed(2)}%	@ ${currentVoltage}mv			Direction reversed but max voltage reached`);
-				this.changeMessage = `						`;
-			}
-
-		} else {	// toExpected >=0 && <=1 - keep the same voltage
-			this.autotuneConsecutiveUnderperformanceCount = 0;
-			this.autotuneVoltageDirection = null;
-			if (this.bestVoltage === 0) {
-				this.bestVoltage = this.currentTunedVoltage ?? this.voltageMap.get(this.desiredFreq) ?? this.settings.coreVoltage;
-			}
-			currentVoltage = this.bestVoltage;
-			this.currentTunedVoltage = currentVoltage;
-			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, this.bestToExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-			this.voltageMap.set(this.desiredFreq, currentVoltage);
-			this.autotuneStableCount++;
-			this.logMon(`[Autotune=] toExpected: ${this.bestToExpected.toFixed(2)}%	@ ${currentVoltage}mV			Stable at ${currentVoltage}mV (${this.autotuneStableCount} cycles)`);
-			this.changeMessage = `						`;
-			this.bestToExpected = -Infinity;
-			this.bestVoltage = 0;
 		}
 	}
 
