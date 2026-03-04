@@ -6,8 +6,12 @@ export function log(message: string): void {
 	console.log(`[${timestamp()}] ${message}`);
 }
 
-export function logMonitor(message: string): void {
-	log(`[monitor.ts] ${message}`);
+export function logMonitor(message: string, continueLine?: boolean): void {
+	if (!!continueLine) {
+		process.stdout.write(`${message}`);
+	} else {
+		process.stdout.write(`\n[${timestamp()}] [monitor.ts] ${message}`);
+	}
 }
 
 export function logIndex(message: string): void {

@@ -210,10 +210,15 @@ export class MonitorService {
 		await this.client.setSystemSettings(this.settings.maxFreq, this.settings.coreVoltage);
 	}
 
-	private logMon(message: string): void {
-		logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
-			+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]`
-			+`	${message}`);
+	private logMon(message: string, continueLine?: boolean): void {
+		if (!!continueLine) {
+			logMonitor(`${message}`, continueLine);
+		} else {
+			logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
+				+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]`
+				+`	${message}`, 
+				continueLine);
+		}
 	}
 
 	stabiliseOn(): void {
@@ -484,7 +489,7 @@ export class MonitorService {
 		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
 			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
 			: 0;
-		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%]	`;
+		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%]	 `;
 
 		// Decide if we have hit point to consider changing frequency based on how far we are from expected hashrate, 
 		// but only if we have been stable for at least 20 cycles to allow time for accurate measurement and prevent overreacting to temporary fluctuations
@@ -522,13 +527,13 @@ export class MonitorService {
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*4;	// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 			} else {	
-				this.logMon(`[Blocked  ] [Autotune ]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	----------`);
+				this.logMon(`[Blocked  ]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	----------`);
 				this.autotuneStableCount = 0;
 			}
 		} else {
 			this.autotuneStableCount++;
 			const saved = [5, 10, 15,20].indexOf(this.autotuneStableCount)>=0 ? '*' : '';
-			this.logMon(`[Stable   ] [Autotune=]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C  Stable for ${this.autotuneStableCount}${saved}${freqChangeString}`);
+			this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	Stable for ${this.autotuneStableCount}${saved}${freqChangeString}`);
 			if (saved!=='') { // Store stable values to voltage.json for recall
 				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
 			}
@@ -584,7 +589,12 @@ export class MonitorService {
 			return;
 		}
 
-		this.logMon(`[BITAXE   ] ${this.changeMessage !== '' ? this.changeMessage : ''}\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`);
+		if (this.changeMessage !== '') {
+			this.logMon(`[BITAXE   ] ${this.changeMessage}\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`);
+		} else {
+			this.logMon(`\tApplying voltage: ${adjustedVoltage}mV ${voltageSource}`, true);
+		}
+	
 		this.changeMessage = '';
 		this.client.setSystemSettings(this.desiredFreq, adjustedVoltage);
 
