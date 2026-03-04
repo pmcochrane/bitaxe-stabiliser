@@ -251,8 +251,8 @@ async function main() {
 		process.exit(0);
 	});
 
-	app.listen(PORT, () => {
-		logIndex(`Bitaxe Stabiliser running at http://localhost:${PORT}`);
+	app.listen(PORT, '0.0.0.0', () => {
+		logIndex(`Bitaxe Stabiliser running at http://0.0.0.0:${PORT}`);
 		logIndex(`Monitoring: ${BITAXE_IP}`);
 
 		setTimeout(() => {

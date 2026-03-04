@@ -29,16 +29,11 @@ export class MonitorService {
 	private voltages: number[] = [];
 	private powers: number[] = [];
 	private hashRates: number[] = [];
+	private stableHashRates: number[] = [];
 
 	private maxStepUp = 10;
 	private secondsBetweenPasses = 1;
 	private autotuneVoltageEveryXcycles = 5;	// Autotune by voltage adjusts every 5 cycles
-	private autotuneEveryXcycles = 30-1; 		// minus 1 because we reset the counter at the start of the autotune function, so it runs on the next cycle after the delay
-	// private stepUpEveryXPasses = ((this.autotuneEveryXcycles+1)*3)+1;
-	// private stepDownEveryXPasses = 2;
-	// private drasticMeasureDelay = 3;
-	// private stepDownSettleDelay = 5;
-	private voltageOverheatReduction = 5;
 	private maxCoreVoltage = 1450;
 	private initialMaxCoreVoltage = 1450;
 
@@ -50,6 +45,7 @@ export class MonitorService {
 	private minHashRate = 1000000000;
 	private maxHashRate = 0;
 	private overallAverageHashRate = 0;
+	private stableAverageHashRate = 0;
 	private overallAverageAsicTemp = 0;
 	private overallAverageVrTemp = 0;
 	private overallAverageVoltage = 0;
@@ -62,7 +58,7 @@ export class MonitorService {
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
 	private autotuneSettleDelayCounter = 0;
-	private autotunePreventIncreaseDelayCounter = 0;
+	private autotunePreventIncreaseDelayCounter = 0; 
 
 	private voltageMap: Map<number, number> = new Map();
 	private baselineVoltages: Map<number, number> = new Map();
@@ -86,7 +82,7 @@ export class MonitorService {
 		// 	this.logMon(`${logPrefix} Voltage was not recently increased so leaving as is`);
 		// }
 		this.autotuneStableCount = 0;
-		this.autotuneSettleDelayCounter = this.autotuneEveryXcycles;
+		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
 		this.autotunePreventIncreaseDelayCounter = 0;
 
 		this.applyChange = true;
@@ -108,7 +104,10 @@ export class MonitorService {
 			}
 		}
 		this.autotuneEnabled=true;
-		this.autotuneStrategy = 'byVoltage'; // if autotune is disabled, we can still use the byVoltage strategy to adjust voltage based on temperature, so default to that if autotune is off
+		this.autotuneStrategy = 'byVoltage';
+		
+		// Start with a delay on allowing voltage increases to prevent autotune from immediately increasing voltage on startup before it has had a chance to measure the effect of the default settings
+		this.autotunePreventIncreaseDelayCounter  = this.autotuneVoltageEveryXcycles*5; 
 
 		this.state = {
 			running: false,
@@ -215,7 +214,10 @@ export class MonitorService {
 			logMonitor(`${message}`, continueLine);
 		} else {
 			logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
-				+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W ${(this.overallAverageHashRate/1000).toFixed(3)}TH/s]`
+				+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W`
+				+` ${(this.stableAverageHashRate>0 
+						? (this.stableAverageHashRate/1000).toFixed(3)+"TH/s"
+						: (this.overallAverageHashRate/1000).toFixed(3)+"TH/s*")}]`
 				+`	${message}`, 
 				continueLine);
 		}
@@ -370,11 +372,11 @@ export class MonitorService {
 			this.voltages.push(info.voltage);
 			this.powers.push(info.power);
 			this.hashRates.push(info.hashRate);
-			if (this.asicTemps.length > 6) this.asicTemps.shift();
-			if (this.vrTemps.length > 6) this.vrTemps.shift();
-			if (this.voltages.length > 6) this.voltages.shift();
-			if (this.powers.length > 6) this.powers.shift();
-			if (this.hashRates.length > 60) this.hashRates.shift();
+			if (this.asicTemps.length > 5) this.asicTemps.shift();
+			if (this.vrTemps.length > 5) this.vrTemps.shift();
+			if (this.voltages.length > 5) this.voltages.shift();
+			if (this.powers.length > 5) this.powers.shift();
+			if (this.hashRates.length > 50) this.hashRates.shift();
 		}
 
 		const avgAsicTemp = this.asicTemps.length > 0
@@ -439,20 +441,6 @@ export class MonitorService {
 		};
 	}
 
-	// private reduceStoredVoltage(logPrefix: string, frequency: number, oldStepDown: number): boolean {
-	// 	const currentVoltage = this.voltageMap.get(frequency);
-	// 	if (currentVoltage === undefined || currentVoltage <= 700) {
-	// 		return false;
-	// 	}
-	// 	const newVoltage = currentVoltage - this.voltageOverheatReduction;
-	// 	const clampedVoltage = Math.max(700, newVoltage);
-	// 	this.voltageMap.set(frequency, clampedVoltage);
-	// 	this.store.setVoltageForFrequency(frequency, clampedVoltage, 0, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
-	// 	this.logMon(`${logPrefix} Quick overheat after step change			Decreasing voltage to ${clampedVoltage}mV`);
-	// 	this.autotuneIncreasedVoltageCounter = 0;
-	// 	return true;
-	// }
-
 	private runAutotune(): void {
 		if (this.autotuneStrategy === 'byVoltage') {
 			this.runAutotuneByVoltage();
@@ -467,12 +455,12 @@ export class MonitorService {
 			this.autotunePreventIncreaseDelayCounter--;
 		}
 
-		// Only run autotune every 5 cycles to allow time for changes to take effect and be measured
+		// Only run autotune every X cycles to allow time for changes to take effect and be measured
 		if (this.autotuneSettleDelayCounter > 0) {
 			this.autotuneSettleDelayCounter--;
 			return;
 		}
-		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
+		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles-1;
 
 		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
 		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
@@ -486,10 +474,10 @@ export class MonitorService {
 		let voltageChanged = false;
 
 		// Calculate how far we are from the expected hashrate as a percentage, to use as context in decision making and logging
-		const toExpected = this.overallAverageHashRate > 0 && this.expectedHashRate > 0
-			? (this.overallAverageHashRate / this.expectedHashRate) * 100 - 100
-			: 0;
-		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%]	 `;
+		const toExpected = this.stableAverageHashRate > 0 && this.expectedHashRate > 0
+			? (this.stableAverageHashRate / this.expectedHashRate) * 100 - 100
+			: ((this.overallAverageHashRate||0) / this.expectedHashRate) * 100 - 100;
+		const toExpectedString= ` [exp:${toExpected.toFixed(1)}%${this.stableAverageHashRate===0 ? '*]' : '] '} 	`;
 
 		// Decide if we have hit point to consider changing frequency based on how far we are from expected hashrate, 
 		// but only if we have been stable for at least 20 cycles to allow time for accurate measurement and prevent overreacting to temporary fluctuations
@@ -497,20 +485,22 @@ export class MonitorService {
 		let needToStepUp=false;
 		let needToStepDown=false;
 		const stableForLongEnough = this.autotuneStableCount >= 10;
-		if (toExpected > 1 && stableForLongEnough) {
-			freqChangeString = '	-> Scale Frequency Up';
-		} else if (toExpected < -3 && stableForLongEnough) {
-			freqChangeString = '	<= Scale Frequency Down';
+		if (toExpected >= 1 && stableForLongEnough) {
+			freqChangeString = '	-> Over Expectations';
+		} else if (toExpected <= -1 && stableForLongEnough) {
+			freqChangeString = '	<- Under Expectations';
 		} else if (stableForLongEnough) {
-			freqChangeString = '	No Frequency Change Required';
+			freqChangeString = '	No Change Required';
 		}
 
+		let saveStatsToVoltagesJson = "";
 		if (this.overallAverageVrTemp > fmaxVr) {
 			newVoltage = Math.max(700, currentVoltage - 10);
 			this.logMon(`[Autotune-]${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	Reducing `);
 			voltageChanged = true;
 			this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;
 			this.autotuneStableCount = 0;
+			this.stableHashRates = [];
 
 		} else if (this.overallAverageAsicTemp > fmaxAsic) {
 			newVoltage = Math.max(700, currentVoltage - 5);
@@ -518,6 +508,7 @@ export class MonitorService {
 			voltageChanged = true;
 			this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 			this.autotuneStableCount = 0;
+			this.stableHashRates = [];
 
 		} else if (this.overallAverageAsicTemp < fminAsic) {
 			if (this.autotunePreventIncreaseDelayCounter === 0) {
@@ -526,17 +517,39 @@ export class MonitorService {
 				voltageChanged = true;
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*4;	// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
+				this.stableHashRates = [];
 			} else {	
-				this.logMon(`[Blocked  ]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	----------`);
+				this.logMon(`[Blocked  ]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 				this.autotuneStableCount = 0;
+				this.stableHashRates = [];
 			}
 		} else {
-			this.autotuneStableCount++;
-			const saved = [5, 10, 15,20].indexOf(this.autotuneStableCount)>=0 ? '*' : '';
-			this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	Stable for ${this.autotuneStableCount}${saved}${freqChangeString}`);
-			if (saved!=='') { // Store stable values to voltage.json for recall
-				this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, this.overallAverageHashRate, this.overallAverageAsicTemp, this.overallAverageVrTemp, this.overallAveragePower, (this.overallAveragePower * 1000) / (this.overallAverageHashRate || 1));
+			if (this.autotunePreventIncreaseDelayCounter === 0) {
+				this.autotuneStableCount++;
+				this.stableHashRates.push(this.overallAverageHashRate);
+				saveStatsToVoltagesJson = this.autotuneStableCount%5===0 ? '*' : '';
+				this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${freqChangeString}`);
+			} else {
+				this.logMon(`[Blocked  ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 			}
+		}
+
+		// Calculate the stable average hashrate over the last X readings
+		if (this.stableHashRates.length > 50) this.stableHashRates.shift();
+		if (this.stableHashRates.length > 0) {
+			this.stableAverageHashRate = this.stableHashRates.reduce((a, b) => a + b, 0) / this.stableHashRates.length;
+		} else {
+			this.stableAverageHashRate = 0;
+		}
+
+		// Save stats if required
+		if (saveStatsToVoltagesJson!=='') { // Store stable values to voltage.json for recall
+			this.store.setVoltageForFrequency(this.desiredFreq, currentVoltage, toExpected, 
+				this.stableAverageHashRate, // this.overallAverageHashRate, 
+				this.overallAverageAsicTemp, 
+				this.overallAverageVrTemp, 
+				this.overallAveragePower, 
+				(this.overallAveragePower * 1000) / (this.stableAverageHashRate || 1));
 		}
 
 		if (voltageChanged && newVoltage !== currentVoltage) {
