@@ -1222,7 +1222,7 @@ export default function Dashboard() {
 								<YAxis
 									yAxisId="voltage"
 									orientation="right"
-									domain={[(dataMin: number) => Math.max(0, dataMin - 50), (dataMax: number) => dataMax + 50]}
+									domain={[(dataMin: number) => Math.max(900, dataMin - 50), (dataMax: number) => dataMax + 50]}
 									stroke="#006400"
 									tick={{ fontSize: 12, fill: '#006400' }}
 									tickFormatter={(value) => Math.round(value).toString()}
