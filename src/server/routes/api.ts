@@ -95,11 +95,11 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 				logApi('Stabilise disabled');
 				break;
 			case 'adjustFreq':
-				monitor.adjustFrequency(command.value || 1);
+				monitor.adjustStep(command.value || 1);
 				logApi(`Frequency adjusted by ${command.value || 1}`);
 				break;
 			case 'adjustVoltage':
-				monitor.adjustVoltage(command.value || 5);
+				monitor.adjustStep(command.value || 5);
 				logApi(`Voltage adjusted by ${command.value || 5}mV`);
 				break;
 			case 'startSweep':
