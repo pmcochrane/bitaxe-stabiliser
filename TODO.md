@@ -16,3 +16,9 @@ to the current existing voltageOffset calculation as a starting point based upon
 ## Bugs
 
 - **BUG**:Changing values for frequency or core voltage sometimes "confuses" the step. The step value will need verified it is correct after changing it.
+
+
+
+i would like to keep track of the expectationmessages when the device is stable. Track a count of the same sequential messages. If the device has been stable for 20 cycles then we should set a class property to changeFrequencyMode. record the averagestablehashRate and toexpected average (as well as other values). We have to decide a direction of travel based upon the acccumlated expectation messages. The stepDOwn value should be changed according to direction. The aim is to reach stability at the new stepdown level. When stability has been achieved (20 stable cycles) compare the toExpected value to the value stored before the frequency change. 
+If the toExpect is closer to 0 or equal to stored value then this is a better frequency and we exit changeFrequencyMode and start over at the new frequency.
+If the toexpect is further away from 0 than before then we have changed step in the incorrect direction - change the stepdown 2 in the opposite direction leaving changeFrequencyMode in place and await stability again.

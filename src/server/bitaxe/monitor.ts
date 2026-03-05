@@ -485,16 +485,14 @@ export class MonitorService {
 
 		// Decide if we have hit point to consider changing frequency based on how far we are from expected hashrate, 
 		// but only if we have been stable for at least 20 cycles to allow time for accurate measurement and prevent overreacting to temporary fluctuations
-		let freqChangeString = '';
-		let needToStepUp=false;
-		let needToStepDown=false;
+		let expectationMessage = '';
 		const stableForLongEnough = this.autotuneStableCount >= 10;
 		if (toExpected >= 1 && stableForLongEnough) {
-			freqChangeString = '	-> Over Expectations';
+			expectationMessage = '	-> Over Expectations';
 		} else if (toExpected <= -1 && stableForLongEnough) {
-			freqChangeString = '	<- Under Expectations';
+			expectationMessage = '	<- Under Expectations';
 		} else if (stableForLongEnough) {
-			freqChangeString = '	No Change Required';
+			expectationMessage = '	No Change Required';
 		}
 
 		let saveStatsToVoltagesJson = "";
@@ -546,7 +544,7 @@ export class MonitorService {
 				this.autotuneStableCount++;
 				this.stableHashRates.push(this.overallAverageHashRate);
 				saveStatsToVoltagesJson = this.autotuneStableCount%5===0 ? '*' : '';
-				this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${freqChangeString}`);
+				this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage}`);
 			} else {
 				this.logMon(`[Blocked  ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 			}
