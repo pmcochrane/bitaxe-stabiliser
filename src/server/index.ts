@@ -64,7 +64,6 @@ getDataDir().then((dataDir) => {
 	const store = new DataStore(
 		SETTINGS_FILE,
 		`${dataDir}/history.json`,
-		`${dataDir}/hashrange.json`,
 		`${dataDir}/events.json`,
 		`${dataDir}/voltages.json`,
 		HISTORY_LIMIT

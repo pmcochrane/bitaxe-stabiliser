@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getStatus, updateSettings, sendControl, getHistoryGraph, getHashrangeAnalysis, getVoltages, HashrangeAnalysis } from '../services/api';
+import { getStatus, updateSettings, sendControl, getHistoryGraph, getVoltages } from '../services/api';
 import type { StatusResponse, Settings, HistoryEntry, VoltageEntry } from '../../both/types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine, LineChart } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
@@ -83,7 +83,6 @@ export default function Dashboard() {
 	const [graphHours, setGraphHours] = useState(getInitialGraphHours());
 	const [isPageVisible, setIsPageVisible] = useState(true);
 	const [isDarkMode, setIsDarkMode] = useState(false);
-	const [hashrangeAnalysis, setHashrangeAnalysis] = useState<HashrangeAnalysis | null>(null);
 	const [dismissHashrateAlert, setDismissHashrateAlert] = useState(false);
 	const [dismissHashrateDropAlert, setDismissHashrateDropAlert] = useState(false);
 	const [dismissLowStepAlert, setDismissLowStepAlert] = useState(false);
@@ -536,9 +535,6 @@ export default function Dashboard() {
 
 	const handleToggleStabilise = async () => {
 		if (!status) return;
-		if (status.sweepMode) {
-			sendControl({ action: 'stopSweep' });
-		}
 		await sendControl({ action: status.stabilise ? 'stabiliseOff' : 'stabiliseOn' });
 		setTimeout(fetchStatus, 100);
 	};
@@ -546,30 +542,6 @@ export default function Dashboard() {
 	const handleAdjustFreq = async (delta: number) => {
 		sendControl({ action: 'adjustFreq', value: delta });
 		setImmediate(fetchStatus);
-	};
-
-	const handleToggleSweep = async () => {
-		if (!status) return;
-		if (status.sweepMode) {
-			sendControl({ action: 'stopSweep' });
-			setTimeout(fetchStatus, 100);
-		} else {
-			const confirmed = await showConfirm(
-				'Start Sweep Mode',
-				`This mode will cycle through each throttle step level until it reaches your set maximum frequency and record the hash rate at each level. The process is as follows:
-				<br /><br />• Start at stepDown = -24
-				<br />• Hash for approx 3 minutes at this step level
-				<br />• Record hash rate data at each frequency
-				<br />• Increment step by 1
-				<br />• Stop automatically when step reaches 0
-				<br /><br />This helps find the optimal frequency/voltage combination but will take a significant time to run.
-				<br /><br />Continue?`
-			);
-			if (confirmed) {
-				sendControl({ action: 'startSweep' });
-				setTimeout(fetchStatus, 100);
-			}
-		}
 	};
 
 	const handleResetData = async () => {
@@ -798,7 +770,7 @@ export default function Dashboard() {
 						)}
 
 						{/* Low step warning alert */}
-						<AnimatedBanner show={status?.showLowStepWarning && !status?.sweepMode && !dataUnavailable && !dismissLowStepAlert} className="mt-3 relative" onDismiss={() => setDismissLowStepAlert(true)}>
+						<AnimatedBanner show={status?.showLowStepWarning && !dataUnavailable && !dismissLowStepAlert} className="mt-3 relative" onDismiss={() => setDismissLowStepAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Failing to attain the desired frequency (last {settingsForm.lowStepAnalyseRange} cycles)</strong>
 								<ul className="list-disc ml-5 mt-2 text-sm">
@@ -816,32 +788,6 @@ export default function Dashboard() {
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">
 							Stabiliser {status?.stabilise ? 'ON' : 'OFF'}
 						</h2>
-						{status?.sweepMode && (() => {
-							const progress = Math.round(((status.stepDown + 24) / 24) * 100);
-							const stepsRemaining = 24 - (status.stepDown + 24);
-							const iterationsPerStep = status.sweepIterations || 150;
-							const currentIteration = status.sweepIterationsCounter || 0;
-							const secondsPerIteration = 1;
-							const currentStepRemaining = (iterationsPerStep - currentIteration) * secondsPerIteration;
-							const totalRemainingSeconds = (stepsRemaining * iterationsPerStep) + currentStepRemaining;
-							const minutesRemaining = Math.round(totalRemainingSeconds / 60);
-							return (
-								<div className="mb-4 p-3 bg-orange-100 dark:bg-orange-900 border border-orange-500 text-orange-700 dark:text-orange-300 rounded text-sm">
-									<strong className="text-lg">Sweep Mode Active</strong>
-									<br />
-									stepDown: {status.stepDown}
-									<div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-										<div 
-											className="bg-orange-500 h-2.5 rounded-full" 
-											style={{ width: `${progress}%` }}
-										/>
-									</div>
-									<div className="text-xs mt-1 text-right">
-										{progress}% complete (~{minutesRemaining} min remaining)
-									</div>
-								</div>
-							);
-						})()}
 						<div className="flex flex-col gap-2">
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === true 
@@ -964,117 +910,6 @@ export default function Dashboard() {
 							</div>
 						</form>
 						<div className="mt-4 flex gap-2">
-							<button
-								onClick={handleToggleSweep}
-								disabled={dataUnavailable}
-								className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-							>
-								{status?.sweepMode ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-								{status?.sweepMode ? 'Stop Sweep' : 'Start Sweep'}
-							</button>
-							<button
-								onClick={async () => {
-									const analysis = await getHashrangeAnalysis();
-									if (analysis.error) {
-										await showAlert('Hashrange Analysis', analysis.error);
-										return;
-									}
-									setHashrangeAnalysis(analysis);
-									const getRankBadge = (rank: number, type: 'hashrate' | 'power' | 'asic' | 'vr' | 'efficiency') => {
-										if (rank === 0) return null;
-										const colors: Record<string, string> = {
-											hashrate: 'bg-yellow-500',
-											power: 'bg-green-500',
-											asic: 'bg-blue-500',
-											vr: 'bg-purple-500',
-											efficiency: 'bg-red-500',
-										};
-										const opacity = Math.max(0.2, (6 - rank) * 0.2);
-										return (
-											<span className={`inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full ${colors[type]} ml-1`} style={{ opacity }}>
-												{rank}
-											</span>
-										);
-									};
-									const getHeaderBadge = (type: 'hashrate' | 'power' | 'asic' | 'vr' | 'efficiency') => {
-										const colors: Record<string, string> = {
-											hashrate: 'bg-yellow-500',
-											power: 'bg-green-500',
-											asic: 'bg-blue-500',
-											vr: 'bg-purple-500',
-											efficiency: 'bg-red-500',
-										};
-										return <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${colors[type]} ml-1`}></span>;
-									};
-									const renderHeader = () => (
-										<tr className="border-b dark:border-gray-600">
-											<th className="text-left p-1 dark:text-white">Freq</th>
-											<th className="text-right p-1 dark:text-white">Voltage</th>
-											<th className="text-right p-1 dark:text-white">Hashrate {getHeaderBadge('hashrate')}</th>
-											<th className="text-right p-1 dark:text-white">ASIC {getHeaderBadge('asic')}</th>
-											<th className="text-right p-1 dark:text-white">VR {getHeaderBadge('vr')}</th>
-											<th className="text-right p-1 dark:text-white">Power {getHeaderBadge('power')}</th>
-											<th className="text-right p-1 dark:text-white">Eff {getHeaderBadge('efficiency')}</th>
-										</tr>
-									);
-									const content = (
-										<div>
-											{analysis.sweepStartTime && (
-												<div className="mb-4 text-sm dark:text-gray-300">
-													Sweep started: {new Date(analysis.sweepStartTime).toLocaleString()}
-												</div>
-											)}
-											<div className="overflow-x-auto">
-												<table className="w-full text-xs">
-													<thead>
-														{renderHeader()}
-													</thead>
-													<tbody>
-														{analysis.allData.map((e, i) => (
-															<tr key={i} className={`border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 ${e.rankHashrate <= 5 || e.rankPower <= 5 || e.rankAsicTemp <= 5 || e.rankVrTemp <= 5 || e.rankEfficiency <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}`}>
-																<td className="p-1 dark:text-white">
-																	{(e.frequency ?? 0).toFixed(2)}
-																	{e.rankHashrate === 1 && <span className="ml-1 text-yellow-600">★</span>}
-																</td>
-																<td className="p-1 text-right dark:text-white">{e.coreVoltage ?? 0}</td>
-																<td className="p-1 text-right dark:text-white relative">
-																	{((e.avgHashRate ?? 0)/1000).toFixed(3)}
-																	{e.rankHashrate > 0 && getRankBadge(e.rankHashrate, 'hashrate')}
-																</td>
-																<td className="p-1 text-right dark:text-white relative">
-																	{(e.avgAsicTemp ?? 0).toFixed(1)}
-																	{e.rankAsicTemp > 0 && getRankBadge(e.rankAsicTemp, 'asic')}
-																</td>
-																<td className="p-1 text-right dark:text-white relative">
-																	{(e.avgVrTemp ?? 0).toFixed(1)}
-																	{e.rankVrTemp > 0 && getRankBadge(e.rankVrTemp, 'vr')}
-																</td>
-																<td className="p-1 text-right dark:text-white relative">
-																	{(e.avgPower ?? 0).toFixed(1)}
-																	{e.rankPower > 0 && getRankBadge(e.rankPower, 'power')}
-																</td>
-																<td className="p-1 text-right dark:text-white relative">
-																	{(e.efficiency ?? 0).toFixed(1)}
-																	{e.rankEfficiency > 0 && getRankBadge(e.rankEfficiency, 'efficiency')}
-																</td>
-															</tr>
-														))}
-													</tbody>
-												</table>
-											</div>
-											<div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-												Ranking badges: 🟡 Hashrate &nbsp; 🔵 ASIC Temp &nbsp; 🟣 VR Temp &nbsp; 🟢 Power &nbsp; 🔴 Efficiency (lower is better)
-											</div>
-										</div>
-									);
-									await showAnalysis('Hashrange Analysis Results', content);
-								}}
-								className="flex items-center justify-center gap-1 flex-1 px-2 py-1 bg-teal-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-								disabled={dataUnavailable}
-							>
-								<BarChart3 className="w-4 h-4" />
-								Analyse Hashrange
-							</button>
 							<button
 								onClick={async () => {
 									const voltages = await getVoltages();

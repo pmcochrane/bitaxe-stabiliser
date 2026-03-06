@@ -1,5 +1,5 @@
 import { BitaxeClient } from './client';
-import { BitaxeStatus, HistoryEntry, Settings, MonitorState, HashrangeEntry, BitaxeSystemInfo, VoltageEntry } from './types';
+import { BitaxeStatus, HistoryEntry, Settings, MonitorState, BitaxeSystemInfo, VoltageEntry } from './types';
 import { DataStore } from '../store/data';
 import { logMonitor } from '../utils/logger';
 
@@ -37,11 +37,6 @@ export class MonitorService {
 	private maxCoreVoltage = 1450;
 	private initialMaxCoreVoltage = 1450;
 
-	private maxSweepSteps = 24;
-	private sweepIterations = 180;
-	private sweepIterationsCounter = 0;
-	private sweepStartTime = '';
-
 	private minHashRate = 1000000000;
 	private maxHashRate = 0;
 	private overallAverageHashRate = 0;
@@ -64,6 +59,9 @@ export class MonitorService {
 	private baselineVoltages: Map<number, number> = new Map();
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
+
+	private expectationMessageCount = 0;
+	private lastExpectationMessage = '';
 
 	private getMinStepDown(): number {
 		return Math.floor((this.settings.maxFreq - 400) / 6.25) * -1;
@@ -112,7 +110,6 @@ export class MonitorService {
 		this.state = {
 			running: false,
 			stabilise: false,
-			sweepMode: false,
 			stepDown: settings.stepDownDefault ?? -10,
 			stepUpCounter: 0,
 			stepDownCounter: 0,
@@ -120,6 +117,11 @@ export class MonitorService {
 			lastCoreVoltageApplied: 0,
 			drasticMeasureCounter: 0,
 			stepDownSettleCounter: 0,
+			changeFrequencyMode: false,
+			changeFrequencyDirection: 'up',
+			preFrequencyChangeToExpected: 0,
+			preFrequencyChangeHashRate: 0,
+			preFrequencyChangeStepDown: 0,
 		};
 	}
 
@@ -168,13 +170,6 @@ export class MonitorService {
 		return this.maxCoreVoltage;
 	}
 
-	getSweepInfo(): { iterations: number; counter: number } {
-		return {
-			iterations: this.sweepIterations,
-			counter: this.sweepIterationsCounter,
-		};
-	}
-
 	getClient(): BitaxeClient {
 		return this.client;
 	}
@@ -217,7 +212,7 @@ export class MonitorService {
 				+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W`
 				+` ${(this.stableAverageHashRate>0 
 						? (this.stableAverageHashRate/1000).toFixed(3)+"TH/s"
-						: (this.overallAverageHashRate/1000).toFixed(3)+"TH/s*")}]`
+						: (this.overallAverageHashRate/1000).toFixed(3)+"TH/s*")}] `
 				+`	${message}`, 
 				continueLine);
 		}
@@ -245,35 +240,6 @@ export class MonitorService {
 		});
 	}
 
-	startSweep(): void {
-		const oldStepDown = this.state.stepDown;
-		this.state.sweepMode = true;
-		this.state.stepDown = 0-this.maxSweepSteps;
-		this.applyChange = true;
-		this.sweepIterationsCounter = 0;
-		this.sweepStartTime = new Date().toISOString();
-		this.store.clearHashrange();
-		this.changeMessage = `[Sweep    ] [1/1] Started: Step ${oldStepDown}->${this.state.stepDown}`;
-		this.store.addEvent({
-			type: 'sweep',
-			message: `${this.changeMessage}`,
-			timestamp: new Date().toISOString(),
-		});
-	}
-
-	stopSweep(): void {
-		const oldStepDown = this.state.stepDown;
-		this.state.sweepMode = false;
-		this.state.stepDown = 0;
-		this.applyChange = true;
-		this.changeMessage = `[Sweep    ] [${this.sweepIterationsCounter}/${this.sweepIterations}] Stopped: Step ${oldStepDown}->${this.state.stepDown}`;
-		this.store.addEvent({
-			type: 'sweep',
-			message: `${this.changeMessage}`,
-			timestamp: new Date().toISOString(),
-		});
-	}
-
 	resetData(): void {
 		this.minHashRate = 1000000000;
 		this.maxHashRate = 0;
@@ -289,7 +255,6 @@ export class MonitorService {
 
 	resetAll(): void {
 		this.resetData();
-		this.store.clearHashrange();
 		this.store.addEvent({
 			type: 'reset',
 			message: 'All data reset',
@@ -356,14 +321,8 @@ export class MonitorService {
 			this.overallAverageVoltage = (info.voltage / 1000) | 0;
 			this.overallAveragePower = ((info.power * 10) | 0) / 10;
 
-			const existingRange = this.store.getHashrangeEntry(this.desiredFreq, this.settings.coreVoltage);
-			if (existingRange) {
-				this.minHashRate = existingRange.minHashRate;
-				this.maxHashRate = existingRange.maxHashRate;
-			} else {
-				this.minHashRate = this.overallAverageHashRate;
-				this.maxHashRate = this.overallAverageHashRate;
-			}
+			this.minHashRate = this.overallAverageHashRate;
+			this.maxHashRate = this.overallAverageHashRate;
 		}
 
 		if (info.temp > 5) {
@@ -495,18 +454,22 @@ export class MonitorService {
 			expectationMessage = '	No Change Required';
 		}
 
+		let modeIndicator = this.state.changeFrequencyMode ? '[FREQ-CHG] ' : '';
+
 		let saveStatsToVoltagesJson = "";
 		if (this.overallAverageVrTemp > fmaxVr) {
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
 				newVoltage = Math.max(700, currentVoltage - 10);
-				this.logMon(`[Autotune-]${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	Reducing `);
+				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	Reducing `);
 				voltageChanged = true;
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles*2;		// prevent decreasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
+				// this.exitFrequencyChangeMode();	// New freq is overheating VR so exit frequency change mode
+
 			} else {
-				this.logMon(`[Blocked  ]${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	---------- ${this.autotunePreventDecreaseDelayCounter} cycles until next decrease allowed`);
+				this.logMon(`[Blocked  ]${modeIndicator}${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	---------- ${this.autotunePreventDecreaseDelayCounter} cycles until next decrease allowed`);
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			}
@@ -514,14 +477,16 @@ export class MonitorService {
 		} else if (this.overallAverageAsicTemp > fmaxAsic) {
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
 				newVoltage = Math.max(700, currentVoltage - 5);
-				this.logMon(`[Autotune-]${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	Reducing `);
+				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	Reducing `);
 				voltageChanged = true;
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles*2;		// prevent decreasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
+				// this.exitFrequencyChangeMode(); // New freq is too hot so exit frequency change mode 
+
 			} else {
-				this.logMon(`[Blocked  ]${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventDecreaseDelayCounter} cycles until next decrease allowed`);
+				this.logMon(`[Blocked  ]${modeIndicator}${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventDecreaseDelayCounter} cycles until next decrease allowed`);
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			}
@@ -529,13 +494,13 @@ export class MonitorService {
 		} else if (this.overallAverageAsicTemp < fminAsic) {
 			if (this.autotunePreventIncreaseDelayCounter === 0) {
 				newVoltage = Math.min(this.maxCoreVoltage, currentVoltage + 5);
-				this.logMon(`[Autotune+]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Increasing`);
+				this.logMon(`[Autotune+]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Increasing`);
 				voltageChanged = true;
-				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*4;	// prevent increasing voltage again to allow change to take effect and be averaged out
+				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;	// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			} else {	
-				this.logMon(`[Blocked  ]${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
+				this.logMon(`[Blocked  ]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			}
@@ -544,7 +509,59 @@ export class MonitorService {
 				this.autotuneStableCount++;
 				this.stableHashRates.push(this.overallAverageHashRate);
 				saveStatsToVoltagesJson = this.autotuneStableCount%5===0 ? '*' : '';
-				this.logMon(`[Stable   ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage}`);
+
+				// stable for long enough so check for if freq change is required
+				if (stableForLongEnough) {
+					if (expectationMessage === this.lastExpectationMessage && this.lastExpectationMessage !== '') {
+						this.expectationMessageCount++;
+					} else {
+						this.expectationMessageCount = 1;
+						this.lastExpectationMessage = expectationMessage;
+					}
+				}
+
+				if (!this.state.changeFrequencyMode) {
+					if (this.expectationMessageCount>=10 && expectationMessage!=='') {
+						// Enter frequency change mode
+						this.logMon(`------------------------------------------------------------------------------------------`, false);
+						this.logMon(`[Autotune  ]${modeIndicator}${toExpectedString}Stable but ${expectationMessage.trim()} for 10 cycles - entering frequency change mode`, true);
+						this.state.preFrequencyChangeToExpected = toExpected;
+						this.state.preFrequencyChangeHashRate = this.stableAverageHashRate;
+						this.state.preFrequencyChangeStepDown = this.state.stepDown;
+						this.state.changeFrequencyMode = true;
+
+						const directionText = this.state.changeFrequencyDirection==='up' ? 'UP (+1)' : 'DOWN (-1)';
+						this.logMon(`[Autotune  ]${modeIndicator}${toExpectedString}Entering frequency change mode: Storing:	toExpected=${this.state.preFrequencyChangeToExpected.toFixed(2)}% 	Step=${this.state.preFrequencyChangeStepDown}	Direction=${directionText}`);
+
+						this.alterStepDownValue((this.state.changeFrequencyDirection==='up' ? 1 : -1), '[FREQ-CHG]');
+					}
+					this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage}`);
+				
+				} else {	// We have already changed frequency and are now assessing the effect, so calculate the new stable to expected and compare to before the frequency change to see if it was an improvement or not
+					const modeIndicator = '[FREQ-CHG] ';
+						this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage} (${this.expectationMessageCount})`);
+
+					if (this.expectationMessageCount>=10 && expectationMessage!=='') {
+						const previousDistanceFromZero = Math.abs(this.state.preFrequencyChangeToExpected);
+						const currentDistanceFromZero = Math.abs(toExpected);
+						if (currentDistanceFromZero <= previousDistanceFromZero) {
+							// New frequency is better or equal to previous frequency & stable so keep it and exit frequency change mode
+							this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}IMPROVED toExpected at new frequency: toExpected ${this.state.preFrequencyChangeToExpected.toFixed(2)}% -> ${toExpected.toFixed(2)}%. Exiting frequency change mode.`);
+							this.logMon(`------------------------------------------------------------------------------------------`, false);
+							this.exitFrequencyChangeMode();
+
+						} else {
+							// New frequency is worse than previous frequency so revert back to previous frequency and exit frequency change mode
+							this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}WORSE toexpected at new frequency: toExpected ${this.state.preFrequencyChangeToExpected.toFixed(2)}% -> ${toExpected.toFixed(2)}%. Reversing direction & back to previous frequency.`);
+							this.state.changeFrequencyDirection = this.state.changeFrequencyDirection==='up' ? 'down' : 'up';
+							this.alterStepDownValue((this.state.changeFrequencyDirection==='up' ? 1 : -1), '[FREQ-CHG]');
+							this.logMon(`------------------------------------------------------------------------------------------`, false);
+							this.exitFrequencyChangeMode();
+						}
+					} else {
+					}
+				}
+
 			} else {
 				this.logMon(`[Blocked  ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 			}
@@ -573,6 +590,12 @@ export class MonitorService {
 			this.voltageMap.set(this.desiredFreq, newVoltage);
 		}
 		this.applyChange = true;
+	}
+
+	// Turn off frequency change mode and reset related state variables to prepare for next time we may need to enter frequency change mode.
+	private exitFrequencyChangeMode(): void {
+		this.state.changeFrequencyMode = false;
+		this.lastExpectationMessage = '';
 	}
 
 	// Apply settings to Bitaxe based on current desired frequency and voltage, which are determined by the stepDown value and autotune adjustments. 

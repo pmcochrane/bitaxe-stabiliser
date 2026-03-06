@@ -1,11 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { HistoryEntry, Settings, HashrangeEntry, VoltageEntry } from '../bitaxe/types';
+import { HistoryEntry, Settings, VoltageEntry } from '../bitaxe/types';
 
 interface StoreData {
 	settings: Settings;
 	history: HistoryEntry[];
-	hashrange: HashrangeEntry[];
 	events: StoreEvent[];
 	voltages: VoltageEntry[];
 }
@@ -19,7 +18,6 @@ interface StoreEvent {
 export class DataStore {
 	private data: StoreData;
 	private historyFile: string;
-	private hashrangeFile: string;
 	private eventsFile: string;
 	private settingsFile: string;
 	private voltagesFile: string;
@@ -28,14 +26,12 @@ export class DataStore {
 	constructor(
 		settingsFile: string,
 		historyFile: string,
-		hashrangeFile: string,
 		eventsFile: string,
 		voltagesFile: string,
 		maxHistoryEntries: number = 172800
 	) {
 		this.settingsFile = settingsFile;
 		this.historyFile = historyFile;
-		this.hashrangeFile = hashrangeFile;
 		this.eventsFile = eventsFile;
 		this.voltagesFile = voltagesFile;
 		this.maxHistoryEntries = maxHistoryEntries;
@@ -43,7 +39,6 @@ export class DataStore {
 		this.data = {
 			settings: this.loadSettings(),
 			history: this.loadHistory(),
-			hashrange: this.loadHashrange(),
 			events: this.loadEvents(),
 			voltages: this.loadVoltages(),
 		};
@@ -84,18 +79,6 @@ export class DataStore {
 			}
 		} catch (error) {
 			console.error('Failed to load history:', error);
-		}
-		return [];
-	}
-
-	private loadHashrange(): HashrangeEntry[] {
-		try {
-			if (fs.existsSync(this.hashrangeFile)) {
-				const content = fs.readFileSync(this.hashrangeFile, 'utf-8');
-				return JSON.parse(content);
-			}
-		} catch (error) {
-			console.error('Failed to load hashrange:', error);
 		}
 		return [];
 	}
@@ -239,38 +222,6 @@ export class DataStore {
 		this.saveHistory();
 	}
 
-	getHashrange(): HashrangeEntry[] {
-		return [...this.data.hashrange];
-	}
-
-	getHashrangeEntry(frequency: number, coreVoltage: number): HashrangeEntry | undefined {
-		return this.data.hashrange.find(
-			e => Math.abs(e.frequency - frequency) < 1 && e.coreVoltage === coreVoltage
-		);
-	}
-
-	setHashrangeEntry(entry: HashrangeEntry): void {
-		this.data.hashrange.push(entry);
-		this.data.hashrange.sort((a, b) => {
-			if (a.frequency !== b.frequency) return a.frequency - b.frequency;
-			return a.coreVoltage - b.coreVoltage;
-		});
-		this.saveHashrange();
-	}
-
-	saveHashrange(): void {
-		try {
-			fs.writeFileSync(this.hashrangeFile, JSON.stringify(this.data.hashrange, null, 2));
-		} catch (error) {
-			console.error('Failed to save hashrange:', error);
-		}
-	}
-
-	clearHashrange(): void {
-		this.data.hashrange = [];
-		this.saveHashrange();
-	}
-
 	addEvent(event: StoreEvent): void {
 		this.data.events.push(event);
 		if (this.data.events.length > 1000) {
@@ -342,7 +293,6 @@ export class DataStore {
 
 	forceSave(): void {
 		this.saveHistory();
-		this.saveHashrange();
 		this.saveVoltages();
 	}
 }

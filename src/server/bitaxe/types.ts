@@ -89,33 +89,14 @@ export interface VoltageEntry {
 	lastUpdate: string;
 }
 
-export interface HashrangeEntry {
-	frequency: number;
-	coreVoltage: number;
-	minHashRate: number;
-	avgHashRate: number;
-	maxHashRate: number;
-	expectedHashRate: number;
-	toExpected: number;
-	efficiency: number;
-	avgAsicTemp: number;
-	avgVrTemp: number;
-	avgVoltage: number;
-	avgPower: number;
-	iterations: number;
-	lastUpdate: string;
-	sweepStartTime?: string;
-}
-
 export interface ControlCommand {
-	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'startSweep' | 'stopSweep' | 'resetData' | 'resetAll';
+	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'resetData' | 'resetAll';
 	value?: number;
 }
 
 export interface MonitorState {
 	running: boolean;
 	stabilise: boolean;
-	sweepMode: boolean;
 	stepDown: number;
 	stepUpCounter: number;
 	stepDownCounter: number;
@@ -123,4 +104,9 @@ export interface MonitorState {
 	lastCoreVoltageApplied: number;
 	drasticMeasureCounter: number;
 	stepDownSettleCounter: number;
+	changeFrequencyMode: boolean;
+	changeFrequencyDirection: 'up' | 'down';
+	preFrequencyChangeToExpected: number;
+	preFrequencyChangeHashRate: number;
+	preFrequencyChangeStepDown: number;
 }
