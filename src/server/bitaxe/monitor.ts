@@ -101,11 +101,6 @@ export class MonitorService {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
 		}
-		this.autotuneEnabled=true;
-		this.autotuneStrategy = 'byVoltage';
-		
-		// Start with a delay on allowing voltage increases to prevent autotune from immediately increasing voltage on startup before it has had a chance to measure the effect of the default settings
-		this.autotunePreventIncreaseDelayCounter  = this.autotuneVoltageEveryXcycles*5; 
 
 		this.state = {
 			running: false,
@@ -123,6 +118,11 @@ export class MonitorService {
 			preFrequencyChangeHashRate: 0,
 			preFrequencyChangeStepDown: 0,
 		};
+
+		this.autotuneStrategy = 'byVoltage';
+		// Start with a delay on allowing voltage increases to prevent autotune from immediately increasing voltage on startup before it has had a chance to measure the effect of the default settings
+		this.autotunePreventIncreaseDelayCounter  = this.autotuneVoltageEveryXcycles*5; 
+		this.autotuneEnabled = this.state.stabilise;
 	}
 
 	updateSettings(settings: Partial<Settings>): void {
@@ -220,11 +220,13 @@ export class MonitorService {
 
 	stabiliseOn(): void {
 		this.state.stabilise = true;
+		this.autotuneEnabled = true;
 		this.logMon('[UI] Automated Stabilisation enabled');
 	}
 
 	stabiliseOff(): void {
 		this.state.stabilise = false;
+		this.autotuneEnabled = false;
 		this.logMon('[UI] Automated Stabilisation disabled');
 	}
 
@@ -270,34 +272,49 @@ export class MonitorService {
 			this.autotuneIncreasedVoltageCounter--;
 		}
 
+		// Decrement the prevent further voltage increase counter if required
+		if (this.autotunePreventIncreaseDelayCounter > 0) {
+			this.autotunePreventIncreaseDelayCounter--;
+		}
+		// Decrement the prevent further voltage decrease counter if required
+		if (this.autotunePreventDecreaseDelayCounter > 0) {
+			this.autotunePreventDecreaseDelayCounter--;
+		}
 
-		this.client.getSystemInfo().then((info) => {
-			if (!info) {
-				this.logMon(`[ERROR] No data received from Bitaxe`);
-				this.scheduleNext();
-				return;
+		// This is the actual cycle delay e.g. every 5 cycles
+		if (this.autotuneSettleDelayCounter > 0) {
+			this.autotuneSettleDelayCounter--;
+			this.scheduleNext();
 
-			} else {
-				const status = this.processReading(info);
-				if (status) {
-					if (this.state.running) {
-						const oldStepDown = this.state.stepDown;
-						// this.evaluateAndAdjust(status);
-						status.oldStepDown = oldStepDown;
-						status.stepDown = this.state.stepDown;
+		} else {
+			// autotune has settled
+			this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles-1;
+			
+			this.client.getSystemInfo().then((info) => {
+				if (!info) {
+					this.logMon(`[ERROR] No data received from Bitaxe`);
+					this.scheduleNext();
+					return;
 
-						if (this.autotuneEnabled) {
-							this.runAutotune();
+				} else {
+					const status = this.processReading(info);
+					if (status) {
+						if (this.state.running) {
+							if (this.autotuneEnabled) {
+								this.runAutotune();
+							} else {
+								this.handleAutotuneOff();
+							}
 						}
+						this.store.addHistoryEntry(status);
 					}
-					this.store.addHistoryEntry(status);
 				}
-			}
-			this.scheduleNext();
-		}).catch((err) => {
-			this.logMon(`[ERROR] Failed to get system info: ${err}`);
-			this.scheduleNext();
-		});
+				this.scheduleNext();
+			}).catch((err) => {
+				this.logMon(`[ERROR] Failed to get system info: ${err}`);
+				this.scheduleNext();
+			});
+		}
 	}
 
 	private scheduleNext(): void {
@@ -406,31 +423,37 @@ export class MonitorService {
 		}
 	}
 
+	private handleAutotuneOff(): void {
+		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
+		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
+		const fmaxVr = this.settings.maxVr;
+
+		const vrTemp = this.overallAverageVrTemp;
+		const asicTemp = this.overallAverageAsicTemp;
+
+		if (vrTemp > fmaxVr || asicTemp > fmaxAsic) {
+			this.alterStepDownValue(-1, '[TEMP-OVR]');
+			this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles - 1;
+		} else if (asicTemp < fminAsic) {
+			if (this.state.stepDown < 0) {
+				this.alterStepDownValue(1, '[TEMP-UND]');
+				this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles - 1;
+			} else {
+				this.logMon(`[Autotune OFF] Low ASIC temp but cannot step up above 0`);
+			}
+		} else {
+			this.logMon(`[Autotune OFF] No Action Required`);
+		}
+	}
+
 	// Auto tune strategy: adjust coreVoltage on a set frequency to align ASIC and VR temperatures with target values, while also considering the hashrate performance relative to expected. 
 	// This strategy is designed to find the optimal voltage for a given frequency that keeps temperatures in check while maximizing hashrate.
 	private runAutotuneByVoltage(): void {
-		// Decrement the prevent further voltage increase counter if required
-		if (this.autotunePreventIncreaseDelayCounter > 0) {
-			this.autotunePreventIncreaseDelayCounter--;
-		}
-		// Decrement the prevent further voltage decrease counter if required
-		if (this.autotunePreventDecreaseDelayCounter > 0) {
-			this.autotunePreventDecreaseDelayCounter--;
-		}
-
-		// Only run autotune every X cycles to allow time for changes to take effect and be measured
-		if (this.autotuneSettleDelayCounter > 0) {
-			this.autotuneSettleDelayCounter--;
-			return;
-		}
-		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles-1;
-
 		const fmaxAsic = this.settings.targetAsic + this.settings.asicTempTolerance;
 		const fminAsic = this.settings.targetAsic - this.settings.asicTempTolerance;
 		const fmaxVr = this.settings.maxVr;
 		const asicDiff= this.overallAverageAsicTemp - this.settings.targetAsic;
 		const vrDiff = this.overallAverageVrTemp - fmaxVr;
-
 
 		const currentVoltage = this.currentTunedVoltage ?? this.appliedCoreVoltage ?? this.settings.coreVoltage;
 		let newVoltage = currentVoltage;
@@ -520,6 +543,9 @@ export class MonitorService {
 					}
 				}
 
+				this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage} (${this.expectationMessageCount})`);
+
+				/*
 				if (!this.state.changeFrequencyMode) {
 					if (this.expectationMessageCount>=10 && expectationMessage!=='') {
 						// Enter frequency change mode
@@ -561,6 +587,7 @@ export class MonitorService {
 					} else {
 					}
 				}
+				*/
 
 			} else {
 				this.logMon(`[Blocked  ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
