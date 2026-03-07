@@ -68,6 +68,8 @@ export default function Dashboard() {
 		lowStepWarningThreshold: -10,
 		stepDownDefault: 0,
 		maxCoreVoltage: 1450,
+		stabilise: false,
+		asicTempTolerance: 0.25,
 	});
 	const settingsFormRef = useRef(settingsForm);
 	const [initialLoad, setInitialLoad] = useState(true);
@@ -656,13 +658,13 @@ export default function Dashboard() {
 						</AnimatedBanner>
 
 						{/* Hashrate warning alert */}
-						<AnimatedBanner show={!!(current && !dataUnavailable && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert && stepDownStableCycles >= 10)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
+						<AnimatedBanner show={!!(current && !dataUnavailable && current.expectedHashrate && current.avgHashRate < (current.expectedHashrate*95/100.0) && !dismissHashrateAlert && stepDownStableCycles >= 10)} className="mb-4 relative" onDismiss={() => setDismissHashrateAlert(true)}>
 							<div className="p-3 bg-amber-100 dark:bg-amber-900 border border-amber-500 text-amber-700 dark:text-amber-300 rounded">
 								<strong className="text-lg">⚠️ Not attaining expected hash rate</strong>
 								<br />
 								Your average hash rate ({current ? (current.avgHashRate/1000.0).toFixed(3) : '0'}TH/s) 
-								is {current ? (100.0*current.avgHashRate/current.expectedHashrate).toFixed(1) : '0'}% 
-								of expected hash rate ({current ? (current.expectedHashrate/1000.0).toFixed(3) : '0'}TH/s). 
+								is {current && current.expectedHashrate ? (100.0*current.avgHashRate/current.expectedHashrate).toFixed(1) : '0'}% 
+								of expected hash rate ({current && current.expectedHashrate ? (current.expectedHashrate/1000.0).toFixed(3) : '0'}TH/s). 
 								<br /><br />
 								This may indicate that the device is not stable at the current settings. 
 								Consider increasing the core voltage or lowering the max frequency to improve stability and achieve the expected hash rate.
@@ -704,8 +706,8 @@ export default function Dashboard() {
 										title={current.toExpected < 0 ? 'Negative value may indicate core voltage is too low to attain the expected frequency. Consider increasing core voltage.' : ''}>
 									To Expected {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
 								</div>
-									<div className="text-xs text-gray-400 text-right">Expected: {(current.expectedHashrate / 1000).toFixed(3)} TH/s</div>
-									<div className="text-xs text-gray-400 text-right ${current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}">Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s</div>
+									<div className="text-xs text-gray-400 text-right">Expected: {current.expectedHashrate ? (current.expectedHashrate / 1000).toFixed(3) : '0'} TH/s</div>
+									<div className={`text-xs text-gray-400 text-right ${current.expectedHashrate && current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}`}>Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">ASIC Temp</div>

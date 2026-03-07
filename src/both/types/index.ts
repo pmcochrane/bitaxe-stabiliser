@@ -9,7 +9,9 @@ export interface Settings {
 	lowStepAnalyseRange: number;
 	lowStepWarningThreshold: number;
 	stepDownDefault: number;
+	asicTempTolerance: number;
 	maxCoreVoltage: number;
+	stabilise: boolean;
 }
 
 export interface HistoryEntry {
@@ -19,7 +21,7 @@ export interface HistoryEntry {
 	stepDown: number;
 	hostname: string;
 	hashRate: number;
-	expectedHashrate: number;
+	expectedHashrate?: number;
 	temp: number;
 	avgAsicTemp: number;
 	vrTemp: number;
@@ -84,4 +86,68 @@ export interface VoltageEntry {
 	avgPower: number;
 	efficiency: number;
 	lastUpdate: string;
+}
+
+export interface BitaxeSystemInfo {
+	hostname: string;
+	ip: string;
+	uptime: number;
+	freeHeap: number;
+	board: string;
+	coreVoltage: number;
+	frequency: number;
+	hashRate: number;
+	expectedHashrate: number;
+	temp: number;
+	vrTemp: number;
+	power: number;
+	voltage: number;
+	overheatMode: boolean;
+	fanSpeed: number;
+	fanRpm: number;
+}
+
+export interface BitaxeStatus extends BitaxeSystemInfo {
+	timestamp: string;
+	iteration: number;
+	oldStepDown: number;
+	stepDown: number;
+	desiredFreq: number;
+	coreVoltage2: number;
+	avgHashRate: number;
+	minAvgHashRate: number;
+	maxAvgHashRate: number;
+	avgAsicTemp: number;
+	avgVrTemp: number;
+	avgVoltage: number;
+	avgPower: number;
+	efficiency: number;
+	toExpected: number;
+}
+
+export interface MonitorState {
+	running: boolean;
+	stabilise: boolean;
+	stepDown: number;
+	stepUpCounter: number;
+	stepDownCounter: number;
+	lastFrequencyApplied: number;
+	lastCoreVoltageApplied: number;
+	drasticMeasureCounter: number;
+	stepDownSettleCounter: number;
+	changeFrequencyMode: boolean;
+	changeFrequencyDirection: 'up' | 'down';
+	preFrequencyChangeToExpected: number;
+	preFrequencyChangeHashRate: number;
+	preFrequencyChangeStepDown: number;
+}
+
+export type AutotuneStrategy = 'hashrate' | 'byVoltage';
+
+export interface AutotuneOptions {
+	autotuneEnabled: boolean;
+	autotuneStrategy?: AutotuneStrategy;
+	maxCoreVoltage: number;
+	voltageMap: VoltageEntry[];
+	autotuneReversalThreshold?: number;
 }

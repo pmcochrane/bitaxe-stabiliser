@@ -28,6 +28,8 @@ export default function History() {
 		lowStepWarningThreshold: -10,
 		stepDownDefault: 0,
 		maxCoreVoltage: 1450,
+		stabilise: false,
+		asicTempTolerance: 0.25,
 	});
 	const { modalState, showAlert, closeModal } = useModal();
 

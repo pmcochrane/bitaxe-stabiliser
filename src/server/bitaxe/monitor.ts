@@ -104,7 +104,7 @@ export class MonitorService {
 
 		this.state = {
 			running: false,
-			stabilise: false,
+			stabilise: settings.stabilise ?? false,
 			stepDown: settings.stepDownDefault ?? -10,
 			stepUpCounter: 0,
 			stepDownCounter: 0,
@@ -119,7 +119,6 @@ export class MonitorService {
 			preFrequencyChangeStepDown: 0,
 		};
 
-		this.autotuneStrategy = 'byVoltage';
 		// Start with a delay on allowing voltage increases to prevent autotune from immediately increasing voltage on startup before it has had a chance to measure the effect of the default settings
 		this.autotunePreventIncreaseDelayCounter  = this.autotuneVoltageEveryXcycles*5; 
 		this.autotuneEnabled = this.state.stabilise;
@@ -137,7 +136,9 @@ export class MonitorService {
 			this.maxCoreVoltage = Math.min(settings.maxCoreVoltage, this.initialMaxCoreVoltage);
 		}
 
-		if (settings.maxFreq !== undefined || settings.coreVoltage !== undefined) {
+		const freqOrVoltageChanged = settings.maxFreq !== undefined || settings.coreVoltage !== undefined;
+
+		if (freqOrVoltageChanged) {
 			const newFrequency = settings.maxFreq ?? this.settings.maxFreq;
 			const newCoreVoltage = settings.coreVoltage ?? this.settings.coreVoltage;
 			if (this.appliedCoreVoltage!==newCoreVoltage) {
@@ -152,9 +153,17 @@ export class MonitorService {
 			this.voltageMap.set(this.desiredFreq, newCoreVoltage);
 			this.applyChange = true;
 			this.logMon(`[UI       ] -------------------------------------------------------------`);
-			
+		}
+
+		const needsImmediateLoop = freqOrVoltageChanged || 
+			settings.targetAsic !== undefined ||
+			settings.asicTempTolerance !== undefined ||
+			settings.maxVr !== undefined;
+
+		if (needsImmediateLoop) {
+			this.logMon(`[UI       ] Target/Autotune settings updated, triggering immediate loop`);
 			if (this.intervalId) {	clearTimeout(this.intervalId); }	
-			this.intervalId = setTimeout(() => this.runLoop(), 0); // Apply new settings immediately
+			this.intervalId = setTimeout(() => this.runLoop(), 0);
 		}
 	}
 
@@ -221,12 +230,16 @@ export class MonitorService {
 	stabiliseOn(): void {
 		this.state.stabilise = true;
 		this.autotuneEnabled = true;
+		this.settings.stabilise = true;
+		this.store.saveSettings(this.settings);
 		this.logMon('[UI] Automated Stabilisation enabled');
 	}
 
 	stabiliseOff(): void {
 		this.state.stabilise = false;
 		this.autotuneEnabled = false;
+		this.settings.stabilise = false;
+		this.store.saveSettings(this.settings);
 		this.logMon('[UI] Automated Stabilisation disabled');
 	}
 

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MonitorService } from '../bitaxe';
 import { DataStore } from '../store';
-import { Settings, ControlCommand } from '../bitaxe/types';
+import { Settings, ControlCommand } from '../../both/types';
 import { logApi } from '../utils/logger';
 
 export function createApiRouter(monitor: MonitorService, store: DataStore): Router {

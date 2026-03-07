@@ -8,9 +8,6 @@ import { MonitorService } from './bitaxe';
 import { DataStore } from './store';
 import { createApiRouter } from './routes';
 import { logIndex } from './utils/logger';
-import { log } from 'console';
-import e from 'express';
-import { DefaultLegendContent } from 'recharts';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 

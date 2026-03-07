@@ -1,6 +1,5 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import { HistoryEntry, Settings, VoltageEntry } from '../bitaxe/types';
+import { HistoryEntry, Settings, VoltageEntry } from '../../both/types';
 
 interface StoreData {
 	settings: Settings;
@@ -68,6 +67,7 @@ export class DataStore {
 			stepDownDefault: 0,
 			asicTempTolerance: 0.25,
 			maxCoreVoltage: 1450,
+			stabilise: false,
 		};
 	}
 
