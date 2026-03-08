@@ -143,11 +143,8 @@ export interface MonitorState {
 	preFrequencyChangeStepDown: number;
 }
 
-export type AutotuneStrategy = 'hashrate' | 'byVoltage';
-
 export interface AutotuneOptions {
 	autotuneEnabled: boolean;
-	autotuneStrategy?: AutotuneStrategy;
 	maxCoreVoltage: number;
 	voltageMap: VoltageEntry[];
 	autotuneReversalThreshold?: number;

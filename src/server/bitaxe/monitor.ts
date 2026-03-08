@@ -3,11 +3,8 @@ import { BitaxeStatus, HistoryEntry, Settings, MonitorState, BitaxeSystemInfo, V
 import { DataStore } from '../store/data';
 import { logMonitor } from '../utils/logger';
 
-export type AutotuneStrategy = 'hashrate' | 'byVoltage';
-
 export interface AutotuneOptions {
 	autotuneEnabled: boolean;
-	autotuneStrategy?: AutotuneStrategy;
 	maxCoreVoltage: number;
 	voltageMap: VoltageEntry[];
 	autotuneReversalThreshold?: number;
@@ -49,7 +46,6 @@ export class MonitorService {
 	private desiredFreq = 0;
 	
 	private autotuneEnabled = true;
-	private autotuneStrategy: AutotuneStrategy = 'byVoltage'; //'hashrate';
 	private autotuneIncreasedVoltageCounter: number = 0;
 	private autotuneStableCount: number = 0;
 	private autotuneSettleDelayCounter = 0;
@@ -100,7 +96,6 @@ export class MonitorService {
 
 		if (autotuneOptions) {
 			this.autotuneEnabled = autotuneOptions.autotuneEnabled ? true : false;
-			this.autotuneStrategy = autotuneOptions.autotuneStrategy ?? 'hashrate';
 			this.maxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			this.initialMaxCoreVoltage = autotuneOptions.maxCoreVoltage;
 			// this.autotuneReversalThreshold = autotuneOptions.autotuneReversalThreshold ?? 0.1;
@@ -316,9 +311,9 @@ export class MonitorService {
 
 		// This is the actual cycle delay e.g. every 5 cycles
 		if (this.autotuneSettleDelayCounter > 0) {
+			// this.logMon(`[Settling ] Waiting ${this.autotuneSettleDelayCounter} more cycles...`);
 			this.autotuneSettleDelayCounter--;
 			this.scheduleNext();
-
 		} else {
 			// autotune has settled
 			this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles-1;
@@ -326,25 +321,25 @@ export class MonitorService {
 			this.client.getSystemInfo().then((info) => {
 				if (!info) {
 					this.logMon(`[ERROR] No data received from Bitaxe`);
-					this.scheduleNext();
-					return;
 
 				} else {
 					const status = this.processReading(info);
 					if (status) {
 						if (this.state.running) {
 							if (this.autotuneEnabled) {
-								this.runAutotune();
+								this.runAutotuneByVoltage();
 							} else {
 								this.handleAutotuneOff();
 							}
 						}
 						this.store.addHistoryEntry(status);
+					} else {
+						this.logMon(`[ERROR] No status returned from processReading`);
 					}
 				}
 				this.scheduleNext();
 			}).catch((err) => {
-				this.logMon(`[ERROR] Failed to get system info: ${err}`);
+				this.logMon(`[ERROR] Failed to get system info from Bitaxe: ${err}`);
 				this.scheduleNext();
 			});
 		}
@@ -495,12 +490,6 @@ export class MonitorService {
 			efficiency,
 			toExpected,
 		};
-	}
-
-	private runAutotune(): void {
-		if (this.autotuneStrategy === 'byVoltage') {
-			this.runAutotuneByVoltage();
-		}
 	}
 
 	private handleAutotuneOff(): void {
