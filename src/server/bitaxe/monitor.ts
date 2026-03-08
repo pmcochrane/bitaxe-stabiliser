@@ -59,9 +59,13 @@ export class MonitorService {
 	private minCoreVoltage = 900;
 	private hashRateDropThreshold = 0.10;
 	private varianceThreshold = 0.05;
+	private expectedHashRateThreshold = 0.90;
 	private voltageBeforeTest = 0;
 	private voltageTestHashRates: number[] = [];
 	private voltageTestActive = false;
+	private voltageInstabilitySteppedDown = false;
+	private voltageInstabilityStepDownBase: number | null = null;
+	private voltageInstabilityRecoverDelay = 0;
 
 	private expectationMessageCount = 0;
 	private lastExpectationMessage = '';
@@ -303,6 +307,10 @@ export class MonitorService {
 		if (this.autotunePreventDecreaseDelayCounter > 0) {
 			this.autotunePreventDecreaseDelayCounter--;
 		}
+		// Decrement the voltage instability recovery delay counter if required
+		if (this.voltageInstabilityRecoverDelay > 0) {
+			this.voltageInstabilityRecoverDelay--;
+		}
 
 		// Check voltage stability after a voltage decrease
 		if (this.voltageTestActive) {
@@ -371,6 +379,16 @@ export class MonitorService {
 		const stdDev = Math.sqrt(variance);
 		const coefficientOfVariation = mean > 0 ? stdDev / mean : 0;
 
+		const hashRateToExpectedRatio = this.expectedHashRate > 0
+			? currentHashRate / this.expectedHashRate
+			: 1;
+
+		if (hashRateToExpectedRatio < this.expectedHashRateThreshold) {
+			this.logMon(`[VOLT TEST] FAILED - Hash rate ${(hashRateToExpectedRatio * 100).toFixed(1)}% of expected ${(this.expectedHashRateThreshold * 100).toFixed(0)}% - Restoring voltage to ${this.voltageBeforeTest}mV`);
+			this.revertVoltageChange();
+			return;
+		}
+
 		if (hashRateDropRatio < (1 - this.hashRateDropThreshold)) {
 			this.logMon(`[VOLT TEST] FAILED - Hash rate dropped ${((1 - hashRateDropRatio) * 100).toFixed(1)}% (${hashRateDropRatio.toFixed(3)}) - Restoring voltage to ${this.voltageBeforeTest}mV`);
 			this.revertVoltageChange();
@@ -384,7 +402,7 @@ export class MonitorService {
 		}
 
 		if (this.autotunePreventDecreaseDelayCounter === 0) {
-			this.logMon(`[VOLT TEST] PASSED - Hash rate stable at ${(hashRateDropRatio * 100).toFixed(1)}%, CV ${(coefficientOfVariation * 100).toFixed(1)}%`);
+			this.logMon(`[VOLT TEST] PASSED - Hash rate ${(hashRateToExpectedRatio * 100).toFixed(1)}% of expected (${(hashRateDropRatio * 100).toFixed(1)}% from start), CV ${(coefficientOfVariation * 100).toFixed(1)}%`);
 			this.voltageTestActive = false;
 			this.voltageTestHashRates = [];
 		}
@@ -395,6 +413,12 @@ export class MonitorService {
 		this.voltageTestActive = false;
 		this.voltageTestHashRates = [];
 		this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles * 3;
+		this.voltageInstabilitySteppedDown = true;
+		if (this.voltageInstabilityStepDownBase === null) {
+			this.voltageInstabilityStepDownBase = this.state.stepDown;
+		}
+		this.voltageInstabilityRecoverDelay = this.autotuneVoltageEveryXcycles * 6;
+		this.alterStepDownValue(-1, '[VOLT TEST]');
 		this.applyChange = true;
 	}
 
@@ -590,7 +614,18 @@ export class MonitorService {
 			}
 
 		} else if (this.overallAverageAsicTemp < fminAsic) { // ASIC Too cold branch
-			if (this.autotunePreventIncreaseDelayCounter === 0) {
+			if (this.voltageInstabilityStepDownBase !== null && this.voltageInstabilityRecoverDelay === 0) {
+				this.logMon(`[Autotune ]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Stepping up frequency to recover from voltage instability`);
+				this.alterStepDownValue(1, '[VOLT RECO]');
+				if (this.state.stepDown >= this.voltageInstabilityStepDownBase) {
+					this.voltageInstabilityStepDownBase = null;
+					this.voltageInstabilitySteppedDown = false;
+				} else {
+					this.voltageInstabilityRecoverDelay = this.autotuneVoltageEveryXcycles * 6;
+				}
+			} else if (this.voltageInstabilityStepDownBase !== null) {
+				this.logMon(`[Blocked  ]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	---------- ${this.voltageInstabilityRecoverDelay} cycles until next step-up allowed`);
+			} else if (this.autotunePreventIncreaseDelayCounter === 0) {
 				newVoltage = Math.min(this.maxCoreVoltage, currentVoltage + 5);
 				this.logMon(`[Autotune+]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Increasing`);
 				voltageChanged = true;
