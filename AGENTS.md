@@ -3,9 +3,10 @@
 Guidelines for agentic coding agents operating in this repository.
 
 ---
+
 ## Thinking
-- Please try and plan what will be changed and ask the user to preceed before implementing changes. Feel free to create a subagent to help with planning the change
-- After any build, inform the user if the dev server needs restarted if any source file outwith the react app is changed.
+
+- Please try and plan what will be changed and ask the user to proceed before implementing changes. Feel free to create a subagent to help with planning the change
 
 ## Build, Lint, and Test Commands
 
@@ -51,6 +52,8 @@ npx vitest run user.spec.ts            # Vitest - specific file
 python -m pytest tests/test.py::func   # Python - specific function
 ```
 
+- After any build, inform the user if the dev server needs restarted if any source file outwith the react app is changed.
+
 ---
 
 ## Code Style Guidelines
@@ -64,7 +67,7 @@ python -m pytest tests/test.py::func   # Python - specific function
 
 ### Formatting
 
-- Use 2 or 4 space indentation consistently (check existing files)
+- Use tab indentation consistently (check existing files)
 - Maximum line length: 80-120 characters
 - Add trailing commas in multi-line arrays/objects
 - One blank line between top-level definitions
@@ -185,40 +188,45 @@ describe('UserService', () => {
 - See README.md for project-specific setup
 - Check package.json for available scripts
 
-
 ## Workflow Orchestration
 
 ### 1. Plan Mode Default
+
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
 
 ### 2. Subagent Strategy
+
 - Use subagents liberally to keep main context window clean
 - Offload research, exploration, and parallel analysis to subagents
 - For complex problems, throw more compute at it via subagents
 - One task per subagent for focused execution
 
 ### 3. Self-Improvement Loop
+
 - After ANY correction from the user: update `tasks/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
 
 ### 4. Verification Before Done
+
 - Never mark a task complete without proving it works
 - Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
 
 ### 5. Demand Elegance (Balanced)
+
 - For non-trivial changes: pause and ask "is there a more elegant way?"
 - If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
 - Skip this for simple, obvious fixes - don't over-engineer
 - Challenge your own work before presenting it
 
 ### 6. Autonomous Bug Fixing
+
 - When given a bug report: just fix it. Don't ask for hand-holding
 - Point at logs, errors, failing tests - then resolve them
 - Zero context switching required from the user

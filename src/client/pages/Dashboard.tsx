@@ -1053,18 +1053,18 @@ export default function Dashboard() {
 									orientation="right"
 									domain={[(dataMin: number) => Math.min(dataMin, -5), (dataMax: number) => Math.max(dataMax, 4)]}
 									ticks={getStepTicks}
-									stroke="#22c55e"
+									stroke="#006400"
 									tick={{ fontSize: 12 }}
-									label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#22c55e' }}
+									label={{ value: 'Step', angle: 90, position: 'right', offset: -25, fill: '#006400' }}
 								/>
 								<YAxis
 									yAxisId="voltage"
 									orientation="right"
 									domain={[(dataMin: number) => Math.max(900, dataMin - 50), (dataMax: number) => dataMax + 50]}
-									stroke="#006400"
-									tick={{ fontSize: 12, fill: '#006400' }}
+									stroke="#22c55e"
+									tick={{ fontSize: 12 }}
 									tickFormatter={(value) => Math.round(value).toString()}
-									label={{ value: 'mV', angle: 0, position: 'right', offset: -10, fill: '#006400' }}
+									label={{ value: 'mV', angle: 0, position: 'right', offset: -10, fill: '#22c55e' }}
 								/>
 								<Tooltip
 									contentStyle={{
@@ -1077,7 +1077,7 @@ export default function Dashboard() {
 								<Legend onClick={handleLegendClick} />
 								<Area yAxisId="hashrate" type="monotone" dataKey="h" name="Hashrate (TH/s)" stroke="#8884d880" fill="#8884d8" strokeWidth={1.5} dot={false} activeDot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.hashRate} />
 								
-								<Area yAxisId="step" type="monotone" dataKey="s" name="Step" stroke="#22c55e" fill="#22c55e80" strokeWidth={1.5} dot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
+								<Area yAxisId="step" type="monotone" dataKey="s" name="Step" stroke="#006400" fill="#147c3a80" strokeWidth={1.5} dot={false} isAnimationActive={false} animationDuration={0} hide={!legendVisibility.stepDown} />
 								{legendVisibility.hashRate && <ReferenceLine yAxisId="hashrate" y={getMedianHashrate} stroke="#aeacdd" strokeDasharray="5 5" label={{ value: 'Median Hash Rate:'+getMedianHashrate.toFixed(3)+"TH/s", fill: '#aeacdd', fontSize: 20 }} />}
 								
 								<Line yAxisId="temp" type="monotone" dataKey="a" name="ASIC Temp (°C)" stroke="#b83636" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} hide={!legendVisibility.temp} />
@@ -1088,7 +1088,7 @@ export default function Dashboard() {
 								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={getMedianVrTemp} stroke="#c2410c" strokeDasharray="3 5" label={{ value: 'Median Voltage Regulator Temp:'+getMedianVrTemp.toFixed(1)+"°C", fill: '#c2410c', fontSize: 20, position: 'bottom', offset: 5 }} />}
 								{legendVisibility.vrTemp && <ReferenceLine yAxisId="temp" y={settingsForm.maxVr} stroke="#f97316" strokeDasharray="15 5" label={{ value: 'Max VR:'+settingsForm.maxVr+"°C", fill: '#f97316', fontSize: 20, position: 'top', offset: 5 }} />}
 								
-								<Line yAxisId="voltage" type="monotone" dataKey="c" name="Core Voltage (mV)" stroke="#006400" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
+								<Line yAxisId="voltage" type="monotone" dataKey="c" name="Core Voltage (mV)" stroke="#22c55e" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} animationDuration={0} />
 								
 							</ComposedChart>
 						</ResponsiveContainer>
