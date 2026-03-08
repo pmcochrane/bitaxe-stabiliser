@@ -32,6 +32,7 @@ const ASIC_TEMP_TOLERANCE = process.env.ASIC_TEMP_TOLERANCE ? parseFloat(process
 const AUTOTUNE_COREVOLTAGE = process.env.AUTOTUNE_COREVOLTAGE ? process.env.AUTOTUNE_COREVOLTAGE !== 'false' : true;
 const AUTOTUNE_STRATEGY = (process.env.AUTOTUNE_STRATEGY === 'byVoltage' ? 'byVoltage' : 'hashrate') as 'hashrate' | 'byVoltage';
 const MAX_COREVOLTAGE = process.env.MAX_COREVOLTAGE ? parseInt(process.env.MAX_COREVOLTAGE) : 1450;
+const MIN_COREVOLTAGE = process.env.MIN_COREVOLTAGE ? parseInt(process.env.MIN_COREVOLTAGE) : undefined;
 
 async function getDataDir(): Promise<string> {
 	let retval=`./deviceData/${BITAXE_IP}`;
@@ -186,6 +187,17 @@ async function initializeSettings() {
 		logIndex(`[default] asicTempTolerance: ${settings.asicTempTolerance}`);
 	}
 
+	// get minCoreVoltage from env, then settings file, then default to 900
+	if (MIN_COREVOLTAGE !== undefined) {
+		settings.minCoreVoltage = MIN_COREVOLTAGE;
+		logIndex(`[env] minCoreVoltage: ${settings.minCoreVoltage}`);
+	} else if (settings.minCoreVoltage) {
+		logIndex(`[settings.json] minCoreVoltage: ${settings.minCoreVoltage}`);
+	} else {
+		settings.minCoreVoltage = 900;
+		logIndex(`[default] minCoreVoltage: ${settings.minCoreVoltage}`);
+	}
+
 	store.saveSettings(settings);
 	
 	return settings;
@@ -196,6 +208,7 @@ async function main() {
 	const voltages = store.getVoltages();
 	logIndex(`Autotune core voltage: ${AUTOTUNE_COREVOLTAGE ? 'enabled' : 'disabled'}`);
 	logIndex(`Max core voltage: ${MAX_COREVOLTAGE}mV`);
+	logIndex(`Min core voltage: ${settings.minCoreVoltage}mV`);
 	logIndex(`Loaded ${voltages.length} voltage entries from voltages.json`);
 	const monitor = new MonitorService(settings, store, {
 		autotuneEnabled: AUTOTUNE_COREVOLTAGE,

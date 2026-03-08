@@ -5,6 +5,7 @@
 ### Changes
 
 - **Monitor**: Added autotune logic to alter the core voltage to control the temperatures at a particular frequency. The coreVoltage specified in the settings is used as a guide and over time, the step level (frequency) will change to try and settle on a a better frequency to obtain stable temperatures whilst maintaining a steady hash rate.
+- **Monitor**: The frequency stepping is now not used as the main method of keeping the bitaxe at a constant temperature as it was previously. The stepping is still there but is mainly used to cater for handling over temperature conditions.
 - **Monitor**: Make the temp control range configurable via an environment variable. This should be a low value floating point and defaults to 0.25. Larger values may prevent the temperatures from stabilising.
 - **Monitor**: Removed sweep mode as it is not necessary with autotune as well as the hashrange modal.
 

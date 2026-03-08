@@ -60,6 +60,13 @@ export class MonitorService {
 	private currentTunedVoltage: number | null = null;
 	private appliedCoreVoltage = 0;
 
+	private minCoreVoltage = 900;
+	private hashRateDropThreshold = 0.10;
+	private varianceThreshold = 0.05;
+	private voltageBeforeTest = 0;
+	private voltageTestHashRates: number[] = [];
+	private voltageTestActive = false;
+
 	private expectationMessageCount = 0;
 	private lastExpectationMessage = '';
 
@@ -100,6 +107,10 @@ export class MonitorService {
 			for (const entry of autotuneOptions.voltageMap) {
 				this.voltageMap.set(entry.frequency, entry.coreVoltage);
 			}
+		}
+
+		if (settings.minCoreVoltage) {
+			this.minCoreVoltage = settings.minCoreVoltage;
 		}
 
 		this.state = {
@@ -168,7 +179,7 @@ export class MonitorService {
 	}
 
 	getSettings(): Settings {
-		return { ...this.settings, maxCoreVoltage: this.maxCoreVoltage };
+		return { ...this.settings, maxCoreVoltage: this.maxCoreVoltage, minCoreVoltage: this.minCoreVoltage };
 	}
 
 	getState(): MonitorState {
@@ -177,6 +188,10 @@ export class MonitorService {
 
 	getMaxCoreVoltage(): number {
 		return this.maxCoreVoltage;
+	}
+
+	getMinCoreVoltage(): number {
+		return this.minCoreVoltage;
 	}
 
 	getClient(): BitaxeClient {
@@ -294,6 +309,11 @@ export class MonitorService {
 			this.autotunePreventDecreaseDelayCounter--;
 		}
 
+		// Check voltage stability after a voltage decrease
+		if (this.voltageTestActive) {
+			this.checkVoltageStability();
+		}
+
 		// This is the actual cycle delay e.g. every 5 cycles
 		if (this.autotuneSettleDelayCounter > 0) {
 			this.autotuneSettleDelayCounter--;
@@ -334,6 +354,53 @@ export class MonitorService {
 		const targetTime = this.loopStartTime + this.secondsBetweenPasses * 1000;
 		const delay = Math.max(0, targetTime - Date.now());
 		this.intervalId = setTimeout(() => this.runLoop(), delay);
+	}
+
+	private checkVoltageStability(): void {
+		if (this.voltageTestHashRates.length === 0) {
+			this.voltageTestHashRates.push(this.overallAverageHashRate);
+			return;
+		}
+
+		const currentHashRate = this.overallAverageHashRate;
+		this.voltageTestHashRates.push(currentHashRate);
+		if (this.voltageTestHashRates.length > 20) {
+			this.voltageTestHashRates.shift();
+		}
+
+		const startHashRate = this.voltageTestHashRates[0];
+		const hashRateDropRatio = currentHashRate / startHashRate;
+
+		const mean = this.voltageTestHashRates.reduce((a, b) => a + b, 0) / this.voltageTestHashRates.length;
+		const variance = this.voltageTestHashRates.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / this.voltageTestHashRates.length;
+		const stdDev = Math.sqrt(variance);
+		const coefficientOfVariation = mean > 0 ? stdDev / mean : 0;
+
+		if (hashRateDropRatio < (1 - this.hashRateDropThreshold)) {
+			this.logMon(`[VOLT TEST] FAILED - Hash rate dropped ${((1 - hashRateDropRatio) * 100).toFixed(1)}% (${hashRateDropRatio.toFixed(3)}) - Restoring voltage to ${this.voltageBeforeTest}mV`);
+			this.revertVoltageChange();
+			return;
+		}
+
+		if (coefficientOfVariation > this.varianceThreshold) {
+			this.logMon(`[VOLT TEST] FAILED - Variance too high ${(coefficientOfVariation * 100).toFixed(1)}% - Restoring voltage to ${this.voltageBeforeTest}mV`);
+			this.revertVoltageChange();
+			return;
+		}
+
+		if (this.autotunePreventDecreaseDelayCounter === 0) {
+			this.logMon(`[VOLT TEST] PASSED - Hash rate stable at ${(hashRateDropRatio * 100).toFixed(1)}%, CV ${(coefficientOfVariation * 100).toFixed(1)}%`);
+			this.voltageTestActive = false;
+			this.voltageTestHashRates = [];
+		}
+	}
+
+	private revertVoltageChange(): void {
+		this.appliedCoreVoltage = this.voltageBeforeTest;
+		this.voltageTestActive = false;
+		this.voltageTestHashRates = [];
+		this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles * 3;
+		this.applyChange = true;
 	}
 
 	private processReading(info: BitaxeSystemInfo): BitaxeStatus | null {
@@ -493,15 +560,18 @@ export class MonitorService {
 		let modeIndicator = this.state.changeFrequencyMode ? '[FREQ-CHG] ' : '';
 
 		let saveStatsToVoltagesJson = "";
-		if (this.overallAverageVrTemp > fmaxVr) {
+		if (this.overallAverageVrTemp > fmaxVr) { // VR Too Hot Branch
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
-				newVoltage = Math.max(700, currentVoltage - 10);
+				newVoltage = Math.max(this.minCoreVoltage, currentVoltage - 10);
 				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	Reducing `);
 				voltageChanged = true;
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles*2;		// prevent decreasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
+				this.voltageBeforeTest = currentVoltage;
+				this.voltageTestHashRates = [];
+				this.voltageTestActive = true;
 				// this.exitFrequencyChangeMode();	// New freq is overheating VR so exit frequency change mode
 
 			} else {
@@ -510,15 +580,18 @@ export class MonitorService {
 				this.stableHashRates = [];
 			}
 
-		} else if (this.overallAverageAsicTemp > fmaxAsic) {
+		} else if (this.overallAverageAsicTemp > fmaxAsic) { // ASIC Too Hot Branch
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
-				newVoltage = Math.max(700, currentVoltage - 5);
+				newVoltage = Math.max(this.minCoreVoltage, currentVoltage - 5);
 				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	Reducing `);
 				voltageChanged = true;
 				this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles*6;		// prevent increasing voltage again to allow change to take effect and be averaged out
 				this.autotunePreventDecreaseDelayCounter = this.autotuneVoltageEveryXcycles*2;		// prevent decreasing voltage again to allow change to take effect and be averaged out
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
+				this.voltageBeforeTest = currentVoltage;
+				this.voltageTestHashRates = [];
+				this.voltageTestActive = true;
 				// this.exitFrequencyChangeMode(); // New freq is too hot so exit frequency change mode 
 
 			} else {
@@ -527,7 +600,7 @@ export class MonitorService {
 				this.stableHashRates = [];
 			}
 
-		} else if (this.overallAverageAsicTemp < fminAsic) {
+		} else if (this.overallAverageAsicTemp < fminAsic) { // ASIC Too cold branch
 			if (this.autotunePreventIncreaseDelayCounter === 0) {
 				newVoltage = Math.min(this.maxCoreVoltage, currentVoltage + 5);
 				this.logMon(`[Autotune+]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Increasing`);
@@ -540,7 +613,7 @@ export class MonitorService {
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			}
-		} else {
+		} else { // Stability branch
 			if (this.autotunePreventIncreaseDelayCounter === 0) {
 				this.autotuneStableCount++;
 				this.stableHashRates.push(this.overallAverageHashRate);
@@ -672,8 +745,8 @@ export class MonitorService {
 		if (adjustedVoltage > this.maxCoreVoltage) {
 			adjustedVoltage = this.maxCoreVoltage;
 		}
-		if (adjustedVoltage < 700) {
-			adjustedVoltage = 700;
+		if (adjustedVoltage < this.minCoreVoltage) {
+			adjustedVoltage = this.minCoreVoltage;
 		}
 
 		if (this.desiredFreq === this.state.lastFrequencyApplied &&

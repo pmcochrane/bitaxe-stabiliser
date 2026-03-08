@@ -11,6 +11,7 @@ export interface Settings {
 	stepDownDefault: number;
 	asicTempTolerance: number;
 	maxCoreVoltage: number;
+	minCoreVoltage: number;
 	stabilise: boolean;
 }
 

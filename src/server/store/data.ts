@@ -67,6 +67,7 @@ export class DataStore {
 			stepDownDefault: 0,
 			asicTempTolerance: 0.25,
 			maxCoreVoltage: 1450,
+			minCoreVoltage: 900,
 			stabilise: false,
 		};
 	}

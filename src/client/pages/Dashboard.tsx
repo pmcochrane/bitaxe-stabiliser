@@ -68,6 +68,7 @@ export default function Dashboard() {
 		lowStepWarningThreshold: -10,
 		stepDownDefault: 0,
 		maxCoreVoltage: 1450,
+		minCoreVoltage: 900,
 		stabilise: false,
 		asicTempTolerance: 0.25,
 	});
