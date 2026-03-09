@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.4.2 Changelog
+
+- Added a new release available banner to the UI
+
+
 ## Version 1.4.1 Changelog
 
 - Docker image is now based upon alpine to reduce the size of the image file & remove bloat

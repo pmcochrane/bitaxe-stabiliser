@@ -1,8 +1,40 @@
 import { Router, Request, Response } from 'express';
+import axios from 'axios';
 import { MonitorService } from '../bitaxe';
 import { DataStore } from '../store';
 import { Settings, ControlCommand } from '../../both/types';
 import { logApi } from '../utils/logger';
+
+const GITHUB_REPO = 'pmcochrane/bitaxe-stabiliser';
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+
+let releaseCache: { data: { latestVersion: string; releaseUrl: string; publishedAt: string } | null; timestamp: number } = {
+	data: null,
+	timestamp: 0,
+};
+
+async function fetchLatestRelease(): Promise<{ latestVersion: string; releaseUrl: string; publishedAt: string } | null> {
+	const now = Date.now();
+	if (releaseCache.data && now - releaseCache.timestamp < CACHE_DURATION_MS) {
+		return releaseCache.data;
+	}
+
+	try {
+		const response = await axios.get(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+			headers: { 'User-Agent': 'bitaxe-stabiliser' },
+		});
+		const data = {
+			latestVersion: response.data.tag_name?.replace(/^v/, '') || '',
+			releaseUrl: response.data.html_url || '',
+			publishedAt: response.data.published_at || '',
+		};
+		releaseCache = { data, timestamp: now };
+		return data;
+	} catch (error) {
+		logApi(`Failed to fetch latest release: ${error}`);
+		return releaseCache.data;
+	}
+}
 
 export function createApiRouter(monitor: MonitorService, store: DataStore): Router {
 	const router = Router();
@@ -56,6 +88,11 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 	router.get('/info', (req: Request, res: Response) => {
 		res.json({ isDev: process.env.NODE_ENV !== 'production' });
+	});
+
+	router.get('/latest-release', async (req: Request, res: Response) => {
+		const release = await fetchLatestRelease();
+		res.json(release);
 	});
 
 	router.put('/settings', (req: Request, res: Response) => {

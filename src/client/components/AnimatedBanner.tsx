@@ -26,7 +26,7 @@ export function AnimatedBanner({ children, show, className = '', onDismiss }: An
 
 	return (
 		<div
-			className={`transition-all duration-500 ease-in-out overflow-hidden ${
+			className={`relative transition-all duration-500 ease-in-out overflow-hidden ${
 				isAnimating ? 'translate-y-0 max-h-[500px]' : '-translate-y-2 max-h-0'
 			} ${className}`}
 		>

@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import About from './pages/About';
 import { getSettings, getInfo } from './services/api';
+import { ReleaseBanner } from './components/ReleaseBanner';
 
 function App() {
 	const location = useLocation();
@@ -16,6 +17,13 @@ function App() {
 		return stored === null ? true : stored === 'true';
 	});
 	const [storageUsage, setStorageUsage] = useState<{ used: number; total: number; breakdown: Record<string, number> } | null>(null);
+	const [latestRelease, setLatestRelease] = useState<{ latestVersion: string; releaseUrl: string } | null>(null);
+	const [releaseDismissed, setReleaseDismissed] = useState(() => {
+		const dismissed = localStorage.getItem('releaseDismissed');
+		if (!dismissed) return false;
+		const dismissedAt = parseInt(dismissed);
+		return Date.now() - dismissedAt <= 24 * 60 * 60 * 1000;
+	});
 
 	useEffect(() => {
 		const calculateStorage = () => {
@@ -70,6 +78,24 @@ function App() {
 			.then(pkg => setVersion(pkg.version))
 			.catch(() => setVersion(''));
 	}, []);
+
+	useEffect(() => {
+		fetch('/api/latest-release')
+			.then(res => res.json())
+			.then(data => {
+				if (data?.latestVersion) {
+					setLatestRelease({ latestVersion: data.latestVersion, releaseUrl: data.releaseUrl });
+				}
+			})
+			.catch(() => {});
+	}, []);
+
+	const dismissRelease = () => {
+		localStorage.setItem('releaseDismissed', String(Date.now()));
+		setReleaseDismissed(true);
+	};
+
+	const showReleaseBanner = latestRelease && latestRelease.latestVersion > version && !releaseDismissed;
 
 	return (
 		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -167,6 +193,13 @@ function App() {
 					</div>
 				</div>
 			</nav>
+
+			<ReleaseBanner
+				show={!!showReleaseBanner}
+				latestVersion={latestRelease?.latestVersion || ''}
+				releaseUrl={latestRelease?.releaseUrl || ''}
+				onDismiss={dismissRelease}
+			/>
 
 			<Routes>
 				<Route path="/" element={<Dashboard />} />
