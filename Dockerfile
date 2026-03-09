@@ -4,7 +4,7 @@
 
 #FROM node:25-alpine AS builder
 # FROM alpine:3.20 AS builder
-FROM alpine:latest AS builder
+FROM dhi/alpine-base:3.23 AS builder
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN npm run build
 # ───────────────────────────────────────────────
 # Final minimal production image
 # ───────────────────────────────────────────────
-FROM alpine:latest
+FROM dhi/alpine-base:3.23
 
 WORKDIR /app
 

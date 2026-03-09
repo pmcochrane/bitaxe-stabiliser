@@ -1,8 +1,13 @@
 # Changelog
 
+## Version 1.4.5 Changelog
+
+- attempt to fix vulnerabilities shown in docker hub update to docker hardend image of alpine
+
 ## Version 1.4.4 Changelog
 
 - fixed to expected colour when >-1 & <0
+- attempt to fix vulnerabilities shown in docker hub
 
 ## Version 1.4.3 Changelog
 
