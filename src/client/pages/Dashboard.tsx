@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph, getVoltages } from '../services/api';
-import type { StatusResponse, Settings, HistoryEntry, VoltageEntry } from '../../both/types';
+import type { StatusResponse, Settings } from '../../both/types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine, LineChart } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
 import { AnimatedBanner } from '../components/AnimatedBanner';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
 import { logUi } from '../utils/logger';
-import { Trash2, Play, Square, BarChart3, RefreshCw, Gauge } from 'lucide-react';
+import { Trash2, RefreshCw, Gauge } from 'lucide-react';
 
 function formatTimeAgo(dateStr: string): string {
 	const diff = Date.now() - new Date(dateStr).getTime();
