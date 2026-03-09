@@ -4,7 +4,6 @@
 
 - fixed to expected colour when >-1 & <0
 
-
 ## Version 1.4.3 Changelog
 
 - NPM Package Updates to latest versions - express, tailwind, vite, react
