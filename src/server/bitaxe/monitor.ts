@@ -652,6 +652,7 @@ export class MonitorService {
 				this.autotuneStableCount = 0;
 				this.stableHashRates = [];
 			}
+
 		} else { // Stability branch
 			if (this.autotunePreventIncreaseDelayCounter === 0) {
 				this.autotuneStableCount++;
@@ -671,6 +672,19 @@ export class MonitorService {
 					} else {
 						this.expectationMessageCount = 1;
 						this.lastExpectationMessage = expectationMessage;
+					}
+
+					if (expectationMessage === '	<- Under Expectations' 
+						&& this.expectationMessageCount >= this.autotuneVoltageEveryXcycles * 3
+						&& this.autotunePreventIncreaseDelayCounter === 0 
+						&& currentVoltage < this.maxCoreVoltage) {
+						
+						newVoltage = Math.min(this.maxCoreVoltage, currentVoltage + 5);
+						this.logMon(`[Autotune+]${toExpectedString}Under Expectation	Increasing voltage to compensate`);
+						voltageChanged = true;
+						this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles * 6;
+						this.autotuneStableCount = 0;
+						this.stableHashRates = [];
 					}
 				}
 

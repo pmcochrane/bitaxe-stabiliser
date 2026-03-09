@@ -3,6 +3,7 @@
 ## Version 1.4.3 Changelog
 
 - NPM Package Updates to latest versions - express, tailwind, vite
+- Added a condition to step up voltage if we are at stable temps but not meeting expectations.
 
 ## Version 1.4.2 Changelog
 
