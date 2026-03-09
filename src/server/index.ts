@@ -4,6 +4,7 @@ import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
+import send from 'send';
 import { MonitorService } from './bitaxe';
 import { DataStore } from './store';
 import { createApiRouter } from './routes';
@@ -229,15 +230,15 @@ async function main() {
 	if (!isDev) {
 		app.use(express.static('dist/client'));
 
-		app.get('*', (req, res) => {
+		app.use((req, res) => {
 			if (!req.path.startsWith('/api')) {
-				res.sendFile(path.join(__dirname, '../client/index.html'));
+				send(req, path.join(__dirname, '../client/index.html')).pipe(res);
 			}
 		});
 	} else {
-		app.get('*', (req, res) => {
+		app.use((req, res) => {
 			if (!req.path.startsWith('/api') && !req.path.startsWith('/readme') && !req.path.startsWith('/package')) {
-				res.sendFile(path.join(__dirname, '../../index.html'));
+				send(req, path.join(__dirname, '../../index.html')).pipe(res);
 			}
 		});
 	}
@@ -269,5 +270,8 @@ async function main() {
 	});
 }
 
-main();
+main().catch((err) => {
+		console.error('Server failed to start:', err);
+		process.exit(1);
+	});
 });
