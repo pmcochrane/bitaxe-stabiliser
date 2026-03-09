@@ -629,7 +629,14 @@ export default function Dashboard() {
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
 					{/* Current Bitaxe Status */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
-						<h2 className="text-lg font-semibold mb-4 dark:text-white">Current Bitaxe Status</h2>
+						<h2 className="text-lg font-semibold mb-4 dark:text-white flex items-center gap-2">
+							Current Bitaxe Status
+							{(status?.stabilityStatus === 'stable' || status?.stabilityStatus === 'stabilising') && (
+								<span className={`px-2 py-0.5 text-xs font-bold rounded ${status?.stabilityStatus === 'stable' ? 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300' : 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300'}`}>
+									{status?.stabilityStatus === 'stable' ? 'Stable' : 'Stabilising'}
+								</span>
+							)}
+						</h2>
 						{/* API error alert */}
 						<AnimatedBanner show={!!apiError} className="mb-4">
 							<div className="p-3 bg-red-100 dark:bg-red-900 border border-red-500 text-red-700 dark:text-red-300 rounded">
@@ -732,11 +739,6 @@ export default function Dashboard() {
 									<div className="text-sm text-gray-500 dark:text-gray-400">Step</div>
 									<div className="flex items-center gap-2">
 										<span className="text-xl font-bold dark:text-white">{current.stepDown}</span>
-										{status?.isStepStable && (
-											<span className="px-2 py-0.5 text-xs font-bold bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">
-												Stable
-											</span>
-										)}
 									</div>
 								</div>
 								<div>
@@ -789,7 +791,7 @@ export default function Dashboard() {
 					{/* Stabiliser Control */}
 					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">
-							Stabiliser {status?.stabilise ? 'ON' : 'OFF'}
+							Stabilisation Options
 						</h2>
 						<div className="flex flex-col gap-2">
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
@@ -807,7 +809,7 @@ export default function Dashboard() {
 									className="hidden"
 									disabled={dataUnavailable}
 								/>
-								<span className={status?.stabilise === true ? 'text-white' : 'dark:text-white'}>Stabilisation On</span>
+								<span className={`text-center ${status?.stabilise === true ? 'text-white' : 'dark:text-white'}`}>Autotune Core Voltage On</span>
 							</label>
 							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
 								status?.stabilise === false 
@@ -824,7 +826,7 @@ export default function Dashboard() {
 									className="hidden"
 									disabled={dataUnavailable}
 								/>
-								<span className={status?.stabilise === false ? 'text-white' : 'dark:text-white'}>No Stabilisation</span>
+								<span className={`text-center ${status?.stabilise === false ? 'text-white' : 'dark:text-white'}`}>Autotune Off - Overheat Protection Only</span>
 							</label>
 						</div>
 					</div>

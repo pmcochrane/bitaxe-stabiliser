@@ -115,6 +115,7 @@ export class MonitorService {
 		this.state = {
 			running: false,
 			stabilise: settings.stabilise ?? false,
+			stabilityStatus: 'inactive',
 			stepDown: settings.stepDownDefault ?? -10,
 			stepUpCounter: 0,
 			stepDownCounter: 0,
@@ -201,10 +202,12 @@ export class MonitorService {
 		if (this.state.running) return;
 
 		this.state.running = true;
+		this.state.stabilityStatus = this.state.stabilise ? 'stabilising' : 'inactive';
 		this.changeMessage = 'Starting monitor service...';
 		this.applyChange = true;
 		this.state.stepDown = this.settings.stepDownDefault ?? -10;
 		this.autotuneSettleDelayCounter = 0;
+		this.autotuneStableCount = 0;
 		this.asicTemps = [];
 		this.vrTemps = [];
 		this.iteration = 0;
@@ -216,6 +219,7 @@ export class MonitorService {
 
 	stop(): void {
 		this.state.running = false;
+		this.state.stabilityStatus = 'inactive';
 		if (this.intervalId) {
 			clearTimeout(this.intervalId);
 			this.intervalId = null;
@@ -245,6 +249,7 @@ export class MonitorService {
 		this.state.stabilise = true;
 		this.autotuneEnabled = true;
 		this.settings.stabilise = true;
+		this.state.stabilityStatus = this.state.running ? 'stabilising' : 'inactive';
 		this.store.saveSettings(this.settings);
 		this.logMon('[UI] Automated Stabilisation enabled');
 	}
@@ -253,6 +258,7 @@ export class MonitorService {
 		this.state.stabilise = false;
 		this.autotuneEnabled = false;
 		this.settings.stabilise = false;
+		this.state.stabilityStatus = 'inactive';
 		this.store.saveSettings(this.settings);
 		this.logMon('[UI] Automated Stabilisation disabled');
 	}
@@ -574,6 +580,7 @@ export class MonitorService {
 
 		let saveStatsToVoltagesJson = "";
 		if (this.overallAverageVrTemp > fmaxVr) { // VR Too Hot Branch
+			this.state.stabilityStatus = 'stabilising';
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
 				newVoltage = Math.max(this.minCoreVoltage, currentVoltage - 10);
 				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}VR High	${vrDiff.toFixed(2)}°C	Reducing `);
@@ -594,6 +601,7 @@ export class MonitorService {
 			}
 
 		} else if (this.overallAverageAsicTemp > fmaxAsic) { // ASIC Too Hot Branch
+			this.state.stabilityStatus = 'stabilising';
 			if (this.autotunePreventDecreaseDelayCounter === 0) {
 				newVoltage = Math.max(this.minCoreVoltage, currentVoltage - 5);
 				this.logMon(`[Autotune-]${modeIndicator}${toExpectedString}ASIC High	${asicDiff.toFixed(2)}°C	Reducing `);
@@ -614,6 +622,7 @@ export class MonitorService {
 			}
 
 		} else if (this.overallAverageAsicTemp < fminAsic) { // ASIC Too cold branch
+			this.state.stabilityStatus = 'stabilising';
 			if (this.voltageInstabilityStepDownBase !== null && this.voltageInstabilityRecoverDelay === 0) {
 				this.logMon(`[Autotune ]${modeIndicator}${toExpectedString}ASIC Low	${asicDiff.toFixed(2)}°C	Stepping up frequency to recover from voltage instability`);
 				this.alterStepDownValue(1, '[VOLT RECO]');
@@ -642,6 +651,12 @@ export class MonitorService {
 				this.autotuneStableCount++;
 				this.stableHashRates.push(this.overallAverageHashRate);
 				saveStatsToVoltagesJson = this.autotuneStableCount%5===0 ? '*' : '';
+
+				if (this.autotuneStableCount >= 10) {
+					this.state.stabilityStatus = 'stable';
+				} else {
+					this.state.stabilityStatus = 'stabilising';
+				}
 
 				// stable for long enough so check for if freq change is required
 				if (stableForLongEnough) {

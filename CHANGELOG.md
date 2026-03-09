@@ -3,6 +3,8 @@
 ## Version 1.4.2 Changelog
 
 - Added a new release available banner to the UI
+- Fixed the stable badge in the dshboard to match the state at the server.
+- show the expected efficiency in the dashboard ui  
 
 
 ## Version 1.4.1 Changelog

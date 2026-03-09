@@ -64,10 +64,12 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 
 		const bitaxeReachable = await monitor.getClient().isReachable();
 		const bitaxeError = bitaxeReachable ? '' : monitor.getClient().getLastError();
+		const monitorState = monitor.getState();
 
 		res.json({
 			running: state.running,
 			stabilise: state.stabilise,
+			stabilityStatus: monitorState.stabilityStatus,
 			stepDown: state.stepDown,
 			settings,
 			current: latest,

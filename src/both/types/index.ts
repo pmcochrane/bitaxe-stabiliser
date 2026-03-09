@@ -52,6 +52,7 @@ export interface EventEntry {
 export interface StatusResponse {
 	running: boolean;
 	stabilise: boolean;
+	stabilityStatus: 'stable' | 'stabilising' | 'inactive';
 	stepDown: number;
 	settings: Settings;
 	current: HistoryEntry | null;
@@ -129,6 +130,7 @@ export interface BitaxeStatus extends BitaxeSystemInfo {
 export interface MonitorState {
 	running: boolean;
 	stabilise: boolean;
+	stabilityStatus: 'stable' | 'stabilising' | 'inactive';
 	stepDown: number;
 	stepUpCounter: number;
 	stepDownCounter: number;
