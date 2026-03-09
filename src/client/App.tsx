@@ -109,11 +109,8 @@ function App() {
 						/>
 						<h1 className="text-3xl font-bold self-center leading-none">Stabiliser</h1>
 						<h1 className="text-xl font-bold self-center leading-none">
-							{isDev ? (
-								<span className="px-2 py-1 text-xs font-bold bg-yellow-500 text-black rounded">DEV Server</span>
-							) : version ? (
-								<span className="px-2 py-1 text-xs font-bold bg-gray-500 text-white rounded">v{version}</span>
-							) : null} &nbsp;
+							<span className="px-2 py-1 text-xs font-bold bg-gray-500 text-white rounded">v{version}</span>
+							&nbsp;
 							{hostname && <span className="text-sm text-gray-400">{hostname}</span>} &nbsp;
 							{ip && (
 								<a
