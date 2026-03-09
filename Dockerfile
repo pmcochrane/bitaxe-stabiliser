@@ -4,12 +4,15 @@
 
 #FROM node:25-alpine AS builder
 # FROM alpine:3.20 AS builder
-FROM dhi/alpine-base:3.23 AS builder
+FROM alpine:3.23 AS builder
 
 WORKDIR /app
 
 # Install Node.js and npm
-RUN apk add --no-cache nodejs npm
+# Keep image small: no cache, upgrade in one layer
+RUN apk update --no-cache && \
+    apk upgrade --no-cache && \
+    apk add --no-cache nodejs npm busybox zlib libpng  
 
 COPY package*.json ./
 
@@ -28,12 +31,14 @@ RUN npm run build
 # ───────────────────────────────────────────────
 # Final minimal production image
 # ───────────────────────────────────────────────
-FROM dhi/alpine-base:3.23
+FROM alpine:3.23
 
 WORKDIR /app
 
 # Install Node.js, npm, and tini; create non-root user
-RUN apk add --no-cache nodejs npm tini && \
+RUN apk update --no-cache && \
+    apk upgrade --no-cache && \
+    apk add --no-cache nodejs npm tini busybox zlib libpng  && \
     addgroup -g 1001 nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
 
