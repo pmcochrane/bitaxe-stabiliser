@@ -708,16 +708,18 @@ export default function Dashboard() {
 						{current && !dataUnavailable ? (
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-2">
 								<div>
-									<div className="text-sm text-gray-500 dark:text-gray-400">Hashrate</div>
-									<div className={`text-xl font-bold dark:text-white`}>{(current.hashRate / 1000).toFixed(3)} <span className="text-sm text-gray-400">TH/s</span></div>
+									<div className="text-sm  text-gray-500 dark:text-gray-400">Average Hashrate</div>
+									<div className={`text-xl font-bold dark:text-white ${current.expectedHashrate && current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}`}>
+										~{(current.avgHashRate / 1000).toFixed(3)} <span className="text-sm text-gray-400">TH/s</span>
+									</div>
 									<div className={`text-xs text-right ${getToExpectedColor(current.toExpected)}`} 
 											title={current.toExpected < 0 ? 'Negative value may indicate core voltage is too low to attain the expected frequency. Consider increasing core voltage.' : ''}>
 										To Expected {current.toExpected >=0 ? '↑ +' : '↓ -'}{Math.abs(current.toExpected).toFixed(1)}%
 									</div>
 									<div className="text-xs text-gray-400 text-right">Expected: {current.expectedHashrate ? (current.expectedHashrate / 1000).toFixed(3) : '0'} TH/s</div>
-									<div className={`text-xs text-gray-400 text-right ${current.expectedHashrate && current.avgHashRate < current.expectedHashrate ? 'text-amber-500 dark:text-amber-400' : 'dark:text-white'}`}>
-										Average: {(current.avgHashRate / 1000).toFixed(3)} TH/s
-										</div>
+									<div className={`text-xs text-gray-400 dark:text-white text-right`}>
+										Current: {(current.hashRate / 1000).toFixed(3)} TH/s
+									</div>
 								</div>
 								<div>
 									<div className="text-sm text-gray-500 dark:text-gray-400">ASIC Temp</div>
