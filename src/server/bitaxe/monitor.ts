@@ -488,6 +488,12 @@ export class MonitorService {
 			this.overallAverageVrTemp = avgVrTemp;
 			this.overallAverageVoltage = avgVoltage;
 			this.overallAveragePower = avgPower;
+		} else {
+			this.overallAverageHashRate = avgHashRate;
+			this.overallAverageAsicTemp = avgAsicTemp;
+			this.overallAverageVrTemp = avgVrTemp;
+			this.overallAverageVoltage = avgVoltage;
+			this.overallAveragePower = avgPower;
 		}
 
 		const toExpected = this.overallAverageHashRate > 0 && expectedHashRate > 0

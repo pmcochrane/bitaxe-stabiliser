@@ -5,6 +5,8 @@
 - Added a new release available banner to the UI
 - Fixed the stable badge in the dshboard to match the state at the server.
 - show the expected efficiency in the dashboard ui  
+- Updated docker to latest alpine image (was 3.21 which was older)
+- Dashboard was showing average hash rate instead of the instantaneous one.
 
 
 ## Version 1.4.1 Changelog
