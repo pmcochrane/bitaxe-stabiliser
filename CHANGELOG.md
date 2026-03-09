@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.4.1 Changelog
+
+- Docker image is now based upon alpine to reduce the size of the image file & remove bloat
+
 ## Version 1.4.0 Changelog
 
 ### Changes
