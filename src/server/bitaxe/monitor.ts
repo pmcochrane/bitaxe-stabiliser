@@ -676,50 +676,6 @@ export class MonitorService {
 
 				this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage} (${this.expectationMessageCount})`);
 
-				/*
-				if (!this.state.changeFrequencyMode) {
-					if (this.expectationMessageCount>=10 && expectationMessage!=='') {
-						// Enter frequency change mode
-						this.logMon(`------------------------------------------------------------------------------------------`, false);
-						this.logMon(`[Autotune  ]${modeIndicator}${toExpectedString}Stable but ${expectationMessage.trim()} for 10 cycles - entering frequency change mode`, true);
-						this.state.preFrequencyChangeToExpected = toExpected;
-						this.state.preFrequencyChangeHashRate = this.stableAverageHashRate;
-						this.state.preFrequencyChangeStepDown = this.state.stepDown;
-						this.state.changeFrequencyMode = true;
-
-						const directionText = this.state.changeFrequencyDirection==='up' ? 'UP (+1)' : 'DOWN (-1)';
-						this.logMon(`[Autotune  ]${modeIndicator}${toExpectedString}Entering frequency change mode: Storing:	toExpected=${this.state.preFrequencyChangeToExpected.toFixed(2)}% 	Step=${this.state.preFrequencyChangeStepDown}	Direction=${directionText}`);
-
-						this.alterStepDownValue((this.state.changeFrequencyDirection==='up' ? 1 : -1), '[FREQ-CHG]');
-					}
-					this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage}`);
-				
-				} else {	// We have already changed frequency and are now assessing the effect, so calculate the new stable to expected and compare to before the frequency change to see if it was an improvement or not
-					const modeIndicator = '[FREQ-CHG] ';
-						this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	${this.autotuneStableCount>=10 ? 'Stable' : 'Stablising'} for ${this.autotuneStableCount}${saveStatsToVoltagesJson}${expectationMessage} (${this.expectationMessageCount})`);
-
-					if (this.expectationMessageCount>=10 && expectationMessage!=='') {
-						const previousDistanceFromZero = Math.abs(this.state.preFrequencyChangeToExpected);
-						const currentDistanceFromZero = Math.abs(toExpected);
-						if (currentDistanceFromZero <= previousDistanceFromZero) {
-							// New frequency is better or equal to previous frequency & stable so keep it and exit frequency change mode
-							this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}IMPROVED toExpected at new frequency: toExpected ${this.state.preFrequencyChangeToExpected.toFixed(2)}% -> ${toExpected.toFixed(2)}%. Exiting frequency change mode.`);
-							this.logMon(`------------------------------------------------------------------------------------------`, false);
-							this.exitFrequencyChangeMode();
-
-						} else {
-							// New frequency is worse than previous frequency so revert back to previous frequency and exit frequency change mode
-							this.logMon(`[Stable   ]${modeIndicator}${toExpectedString}WORSE toexpected at new frequency: toExpected ${this.state.preFrequencyChangeToExpected.toFixed(2)}% -> ${toExpected.toFixed(2)}%. Reversing direction & back to previous frequency.`);
-							this.state.changeFrequencyDirection = this.state.changeFrequencyDirection==='up' ? 'down' : 'up';
-							this.alterStepDownValue((this.state.changeFrequencyDirection==='up' ? 1 : -1), '[FREQ-CHG]');
-							this.logMon(`------------------------------------------------------------------------------------------`, false);
-							this.exitFrequencyChangeMode();
-						}
-					} else {
-					}
-				}
-				*/
-
 			} else {
 				this.logMon(`[Blocked  ]${toExpectedString}Temps OK	${asicDiff.toFixed(2)}°C	---------- ${this.autotunePreventIncreaseDelayCounter} cycles until next increase allowed`);
 			}
