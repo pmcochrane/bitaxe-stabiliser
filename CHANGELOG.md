@@ -2,7 +2,7 @@
 
 ## Version 1.4.3 Changelog
 
-- NPM Package Updates to latest versions - express, tailwind
+- NPM Package Updates to latest versions - express, tailwind, vite
 
 ## Version 1.4.2 Changelog
 
