@@ -2,6 +2,8 @@
 
 ## Version 1.4.3 Changelog
 
+- NPM Package Updates to latest versions
+
 ## Version 1.4.2 Changelog
 
 - Added a new release available banner to the UI
