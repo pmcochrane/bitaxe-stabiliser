@@ -21,7 +21,7 @@ export default function About() {
 	}, []);
 
 	return (
-		<div className="container mx-auto p-2 max-w-4xl">
+		<div className="container mx-auto max-xl:max-w-full p-2 max-w-4xl">
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
 				<h1 className="text-2xl font-bold mb-4 dark:text-white">
 					About Bitaxe Stabiliser  					

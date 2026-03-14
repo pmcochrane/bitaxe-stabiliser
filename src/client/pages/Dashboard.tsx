@@ -625,10 +625,10 @@ export default function Dashboard() {
 					</div>
 				</div>
 			</AnimatedBanner>
-			<div className="container mx-auto py-2 px-2">
-				<div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+			<div className="container mx-auto max-xl:max-w-full py-2 px-2">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-2">
 					{/* Current Bitaxe Status */}
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white flex items-center gap-2">
 							Current Bitaxe Status
 							{(status?.stabilityStatus === 'stable' || status?.stabilityStatus === 'stabilising') && (
@@ -795,71 +795,63 @@ export default function Dashboard() {
 						</AnimatedBanner>
 					</div>
 
-					{/* Stabiliser Control */}
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-1">
-						<h2 className="text-lg font-semibold mb-4 dark:text-white">
-							Stabilisation Options
-						</h2>
-						<div className="flex flex-col gap-2">
-							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
-								status?.stabilise === true 
-									? 'border-green-500 bg-green-500 text-white' 
-									: dataUnavailable
-										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
-										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-							}`}>
-								<input
-									type="radio"
-									name="stabilise"
-									checked={status?.stabilise === true}
-									onChange={() => !dataUnavailable && status?.stabilise !== true && handleToggleStabilise()}
-									className="hidden"
-									disabled={dataUnavailable}
-								/>
-								<span className={`text-center ${status?.stabilise === true ? 'text-white' : 'dark:text-white'}`}>Autotune Core Voltage On</span>
-							</label>
-							<label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border ${
-								status?.stabilise === false 
-									? 'border-gray-400 bg-gray-400 text-white' 
-									: dataUnavailable
-										? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
-										: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-							}`}>
-								<input
-									type="radio"
-									name="stabilise"
-									checked={status?.stabilise === false}
-									onChange={() => !dataUnavailable && status?.stabilise !== false && handleToggleStabilise()}
-									className="hidden"
-									disabled={dataUnavailable}
-								/>
-								<span className={`text-center ${status?.stabilise === false ? 'text-white' : 'dark:text-white'}`}>Autotune Off - Overheat Protection Only</span>
-							</label>
-						</div>
-					</div>
-
 					{/* Manual Control and Settings Form */}
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:col-span-2">
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
 						<h2 className="text-lg font-semibold mb-4 dark:text-white">Manual Control</h2>
-						<div className="flex flex-wrap gap-2 mb-2 items-center">
-							<div className="flex gap-2">
-								<button
-									onClick={() => handleAdjustFreq(1)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Step +
-								</button>
-								<button
-									onClick={() => handleAdjustFreq(-1)}
-									disabled={dataUnavailable}
-									className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Step -
-								</button>
+						<div className="flex flex-col gap-2 mb-2">
+							<div className="flex flex-wrap gap-2">
+								<label className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border cursor-pointer ${
+									status?.stabilise === true 
+										? 'border-green-500 bg-green-500 text-white' 
+										: dataUnavailable
+											? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+											: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white'
+								}`}>
+									<input
+										type="radio"
+										name="stabilise"
+										checked={status?.stabilise === true}
+										onChange={() => !dataUnavailable && status?.stabilise !== true && handleToggleStabilise()}
+										className="hidden"
+										disabled={dataUnavailable}
+									/>
+									<span className="text-center">Autotune Core Voltage On</span>
+								</label>
+								<label className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border cursor-pointer ${
+									status?.stabilise === false 
+										? 'border-gray-400 bg-gray-400 text-white' 
+										: dataUnavailable
+											? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+											: 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white'
+								}`}>
+									<input
+										type="radio"
+										name="stabilise"
+										checked={status?.stabilise === false}
+										onChange={() => !dataUnavailable && status?.stabilise !== false && handleToggleStabilise()}
+										className="hidden"
+										disabled={dataUnavailable}
+									/>
+									<span className="text-center">Autotune Off - Overheat Protection Only</span>
+								</label>
 							</div>
-							<div className="flex-1"></div>
-							<div>
+							<div className="flex flex-wrap gap-2 justify-between items-start">
+								<div className="flex gap-2">
+									<button
+										onClick={() => handleAdjustFreq(1)}
+										disabled={dataUnavailable}
+										className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										Step +
+									</button>
+									<button
+										onClick={() => handleAdjustFreq(-1)}
+										disabled={dataUnavailable}
+										className="px-3 py-2 bg-blue-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										Step -
+									</button>
+								</div>
 								<button
 									onClick={handleResetData}
 									disabled={dataUnavailable}

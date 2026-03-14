@@ -179,7 +179,7 @@ export default function History() {
 				onConfirm={modalState.onConfirm}
 				onCancel={closeModal}
 			/>
-			<div className="container mx-auto px-2 py-2 flex flex-col overflow-hidden">
+			<div className="container mx-auto max-xl:max-w-full px-2 py-2 flex flex-col overflow-hidden">
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4 flex-shrink-0" ref={headerRef}>
 				<div className="flex flex-wrap gap-4 items-center">
 					<select

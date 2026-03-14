@@ -8,13 +8,15 @@ FROM alpine:3.23 AS builder
 
 WORKDIR /app
 
+COPY package*.json ./
+
 # Install Node.js and npm
 # Keep image small: no cache, upgrade in one layer
 RUN apk update --no-cache && \
     apk upgrade --no-cache && \
-    apk add --no-cache nodejs npm busybox zlib libpng  
-
-COPY package*.json ./
+    apk add --no-cache nodejs npm busybox zlib libpng  && \
+    npm install --save-dev tar@7.5.8 && \
+    npm install 
 
 # Install ALL dependencies (dev + prod) with BuildKit cache
 RUN --mount=type=cache,target=/root/.npm npm ci
@@ -47,6 +49,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 # Install prod deps, then clean up
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev --ignore-scripts --no-audit --no-fund && \
+    npm install tar@7.5.8 --no-save --omit=dev --force && \
     gzip /usr/bin/node && \
     chown -R nodejs:nodejs /usr/bin && \
     chmod -R 755 /usr/bin && \

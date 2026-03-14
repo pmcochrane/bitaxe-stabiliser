@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.4.6 Changelog
+
+- Tidy up UI sizing for smaller screen sizes.
+
+
 ## Version 1.4.5 Changelog
 
 - attempt to fix vulnerabilities shown in docker hub update to docker hardend image of alpine
