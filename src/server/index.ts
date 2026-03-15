@@ -9,6 +9,7 @@ import { MonitorService } from './bitaxe';
 import { DataStore } from './store';
 import { createApiRouter } from './routes';
 import { logIndex } from './utils/logger';
+import { initSocketServer, emitStatus } from './utils/socket';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -259,14 +260,41 @@ async function main() {
 		process.exit(0);
 	});
 
-	app.listen(PORT, '0.0.0.0', () => {
+	const server = app.listen(PORT, '0.0.0.0', () => {
 		logIndex(`Bitaxe Stabiliser running at http://0.0.0.0:${PORT}`);
 		logIndex(`Monitoring: ${BITAXE_IP}`);
+
+		initSocketServer(server);
+		logIndex('WebSocket server initialized');
 
 		setTimeout(() => {
 			monitor.start();
 			logIndex('Monitor started');
 		}, 2000);
+
+		setInterval(async () => {
+			const history = store.getLastNHistory(10);
+			const state = monitor.getState();
+			const settings = monitor.getSettings();
+			const events = store.getEvents(10);
+			const latest = history[history.length - 1] || null;
+			const bitaxeReachable = await monitor.getClient().isReachable();
+			const bitaxeError = bitaxeReachable ? '' : monitor.getClient().getLastError();
+			const monitorState = monitor.getState();
+
+			emitStatus({
+				running: state.running,
+				stabilise: state.stabilise,
+				stabilityStatus: monitorState.stabilityStatus,
+				stepDown: state.stepDown,
+				settings,
+				current: latest,
+				history,
+				events,
+				bitaxeReachable,
+				bitaxeError,
+			});
+		}, 3000);
 	});
 }
 

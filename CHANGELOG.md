@@ -1,9 +1,12 @@
 # Changelog
 
+## Version 1.4.7 Changelog
+
+- Added a logs page to view the server logs which is passed over a websocket to the UI.
+
 ## Version 1.4.6 Changelog
 
 - Tidy up UI sizing for smaller screen sizes.
-
 
 ## Version 1.4.5 Changelog
 

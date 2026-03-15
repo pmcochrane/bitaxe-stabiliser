@@ -1,16 +1,23 @@
+import { addLog } from './socket';
+
 export function timestamp(): string {
 	return new Date().toISOString();
 }
 
 export function log(message: string): void {
-	console.log(`[${timestamp()}] ${message}`);
+	const fullMessage = `[${timestamp()}] ${message}`;
+	console.log(fullMessage);
+	addLog(message, 'log');
 }
 
 export function logMonitor(message: string, continueLine?: boolean): void {
-	if (!!continueLine) {
-		process.stdout.write(`${message}`);
-	} else {
-		process.stdout.write(`\n[${timestamp()}] [monitor.ts] ${message}`);
+	const fullMessage = !!continueLine 
+		? message 
+		: `\n[${timestamp()}] [monitor.ts] ${message}`;
+	
+	process.stdout.write(fullMessage);
+	if (!continueLine) {
+		addLog(message, 'monitor');
 	}
 }
 

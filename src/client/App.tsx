@@ -3,8 +3,10 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import About from './pages/About';
+import Logs from './pages/Logs';
 import { getSettings, getInfo } from './services/api';
 import { ReleaseBanner } from './components/ReleaseBanner';
+import { socketService } from './services/socket';
 
 function App() {
 	const location = useLocation();
@@ -90,6 +92,13 @@ function App() {
 			.catch(() => {});
 	}, []);
 
+	useEffect(() => {
+		socketService.connect();
+		return () => {
+			socketService.disconnect();
+		};
+	}, []);
+
 	const dismissRelease = () => {
 		localStorage.setItem('releaseDismissed', String(Date.now()));
 		setReleaseDismissed(true);
@@ -98,8 +107,8 @@ function App() {
 	const showReleaseBanner = latestRelease && latestRelease.latestVersion > version && !releaseDismissed;
 
 	return (
-		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-2">
+		<div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+			<nav className="bg-slate-800 dark:bg-slate-950 text-white p-2 shrink-0">
 				<div className="container mx-auto max-xl:max-w-full flex justify-between items-center">
 					<div className="flex flex-col gap-2">
 						<div className="flex items-center gap-2"> 
@@ -161,6 +170,12 @@ function App() {
 							>
 								About
 							</Link>
+							<Link
+								to="/logs"
+								className={`hover:text-blue-300 ${location.pathname === '/logs' ? 'text-blue-300' : ''}`}
+							>
+								Logs
+							</Link>
 						</div>
 						<a
 							href="https://github.com/pmcochrane/bitaxe-stabiliser"
@@ -198,11 +213,14 @@ function App() {
 				onDismiss={dismissRelease}
 			/>
 
-			<Routes>
-				<Route path="/" element={<Dashboard />} />
-				<Route path="/history" element={<History />} />
-				<Route path="/about" element={<About />} />
-			</Routes>
+			<div className="flex-1 min-h-0">
+				<Routes>
+					<Route path="/" element={<Dashboard />} />
+					<Route path="/history" element={<History />} />
+					<Route path="/about" element={<About />} />
+					<Route path="/logs" element={<Logs />} />
+				</Routes>
+			</div>
 		</div>
 	);
 }

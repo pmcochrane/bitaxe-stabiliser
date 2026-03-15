@@ -1,6 +1,6 @@
 {
   "name": "bitaxe-stabiliser",
-  "version": "1.4.5",
+  "version": "1.4.7",
   "description": "Web-based Bitaxe monitoring and control application. Choose a temperature and app will attempt to keep your bitaxe at that temperature by adjusting the asic voltage & frequency",
   "main": "dist/server/index.js",
   "scripts": {
@@ -27,7 +27,9 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.0",
-    "send": "^1.2.1"
+    "send": "^1.2.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",

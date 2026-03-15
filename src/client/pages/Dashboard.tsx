@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getStatus, updateSettings, sendControl, getHistoryGraph, getVoltages } from '../services/api';
+import { socketService } from '../services/socket';
 import type { StatusResponse, Settings } from '../../both/types';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar, ReferenceLine, LineChart } from 'recharts';
 import { Modal, useModal } from '../components/Modal';
@@ -460,9 +461,32 @@ export default function Dashboard() {
 
 	useEffect(() => {
 		fetchStatus();
-		const interval = setInterval(fetchStatus, 3000);
-		return () => clearInterval(interval);
-	}, [fetchStatus, isPageVisible]);
+		const unsubscribe = socketService.onStatus((data: StatusResponse) => {
+			fetchStatusCounter.current++;
+			const shouldFetchGraph = fetchStatusCounter.current % 4 === 0;
+			setStatus(data);
+			if (data.current) {
+				if (lastStepDownValue !== null && data.current.stepDown === lastStepDownValue) {
+					setStepDownStableCycles(prev => prev + 1);
+				} else {
+					setStepDownStableCycles(0);
+					setDismissHashrateAlert(false);
+				}
+				setLastStepDownValue(data.current.stepDown);
+			}
+			setApiError(null);
+			if (initialLoad) {
+				setSettingsForm(data.settings);
+				settingsFormRef.current = data.settings;
+				setInitialLoad(false);
+			}
+			if (shouldFetchGraph) {
+				fetchGraphData();
+			}
+			setLoading(false);
+		});
+		return () => unsubscribe();
+	}, [initialLoad, fetchGraphData, lastStepDownValue]);
 
 	const getHashrateDomain = useMemo((): [number, number] => {
 		if (graphData.length === 0) return [0, 2];
