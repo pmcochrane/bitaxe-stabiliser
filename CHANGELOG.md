@@ -2,7 +2,8 @@
 
 ## Version 1.4.8 Changelog
 
--
+- Prettier DOnation Page
+- Fix history display blank screen on old ipads
 
 ## Version 1.4.7 Changelog
 

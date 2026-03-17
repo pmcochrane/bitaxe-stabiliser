@@ -3,6 +3,7 @@ import { getHistory, getHistoryPages, getSettings } from '../services/api';
 import type { HistoryEntry, HistoryResponse, Settings } from '../../both/types';
 import { Modal, useModal } from '../components/Modal';
 import { getTempColor, getToExpectedColor } from '../utils/colors';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export default function History() {
 	const [data, setData] = useState<HistoryEntry[]>([]);
@@ -170,7 +171,7 @@ export default function History() {
 	};
 
 	return (
-		<>
+		<ErrorBoundary>
 			<Modal
 				isOpen={modalState.isOpen}
 				title={modalState.title}
@@ -277,7 +278,7 @@ export default function History() {
 								</tr>
 							) : data.length === 0 ? (
 								<tr>
-									<td colSpan={12} className="p-4 text-center dark:text-white">No data</td>
+									<td colSpan={10} className="p-4 text-center dark:text-white">No data</td>
 								</tr>
 							) : (
 								data.map((h, i) => {
@@ -302,7 +303,7 @@ export default function History() {
 					</table>
 				</div>
 			</div>
-		</div>
-		</>
+			</div>
+		</ErrorBoundary>
 	);
 }

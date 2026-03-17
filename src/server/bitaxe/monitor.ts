@@ -238,8 +238,8 @@ export class MonitorService {
 			logMonitor(`[${this.iteration}] [${this.state.stepDown}: ${this.desiredFreq.toFixed(2)}MHz @ ${this.appliedCoreVoltage}mv] `
 				+`[${this.overallAverageAsicTemp.toFixed(1)}°C ${this.overallAverageVrTemp.toFixed(1)}°C ${this.overallAveragePower.toFixed(1)}W`
 				+` ${(this.stableAverageHashRate>0 
-						? (this.stableAverageHashRate/1000).toFixed(3)+"TH/s"
-						: (this.overallAverageHashRate/1000).toFixed(3)+"TH/s*")}] `
+						? (this.stableAverageHashRate/1000).toFixed(3)+"TH/s]  "
+						: (this.overallAverageHashRate/1000).toFixed(3)+"TH/s*]")} `
 				+`	${message}`, 
 				continueLine);
 		}
