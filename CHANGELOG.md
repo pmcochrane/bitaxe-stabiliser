@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.4.9 Changelog
+
+- Rework the history page to try and make it more memory efficient
+
 ## Version 1.4.8 Changelog
 
 - Prettier DOnation Page
