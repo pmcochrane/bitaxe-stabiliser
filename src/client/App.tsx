@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import About from './pages/About';
 import Logs from './pages/Logs';
+import Donate from './pages/Donate';
 import { getSettings, getInfo } from './services/api';
 import { ReleaseBanner } from './components/ReleaseBanner';
 import { socketService } from './services/socket';
@@ -140,16 +141,12 @@ function App() {
 							</h1>
 						</div>
 					</div>
-					<button
-						onClick={() => {
-							navigator.clipboard.writeText('bc1qna9cfhz6vuafp9vjkr5uvch7l82xgucdeejxtw');
-							alert('Address has been copied to the clipboard');
-						}}
-						title="All donations greatly accepted. Thank you, Paul"
+					<Link
+						to="/donate"
 						className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded"
 					>
 						Tip Developer
-					</button>
+					</Link>
 					<div className="flex items-center gap-4">
 						<div className="space-x-4">
 							<Link
@@ -219,6 +216,7 @@ function App() {
 					<Route path="/history" element={<History />} />
 					<Route path="/about" element={<About />} />
 					<Route path="/logs" element={<Logs />} />
+					<Route path="/donate" element={<Donate />} />
 				</Routes>
 			</div>
 		</div>

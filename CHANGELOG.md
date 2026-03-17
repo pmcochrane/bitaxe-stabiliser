@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.4.8 Changelog
+
+-
+
 ## Version 1.4.7 Changelog
 
 - Added a logs page to view the server logs which is passed over a websocket to the UI.
