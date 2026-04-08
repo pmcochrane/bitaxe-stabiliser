@@ -107,7 +107,7 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 		res.json(updatedSettings);
 	});
 
-	router.post('/control', (req: Request, res: Response) => {
+	router.post('/control', async (req: Request, res: Response) => {
 		const command: ControlCommand = req.body;
 
 		switch (command.action) {
@@ -138,6 +138,14 @@ export function createApiRouter(monitor: MonitorService, store: DataStore): Rout
 			case 'resetData':
 				monitor.resetData();
 				logApi('Data reset');
+				break;
+			case 'restartStabilizer':
+				await monitor.restartStabilizer();
+				logApi('Stabilizer restarted');
+				break;
+			case 'resetBitaxe':
+				await monitor.resetBitaxe();
+				logApi('Bitaxe rebooted');
 				break;
 			case 'resetAll':
 				monitor.resetAll();

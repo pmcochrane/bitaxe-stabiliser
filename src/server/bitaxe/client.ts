@@ -118,4 +118,14 @@ export class BitaxeClient {
 			return false;
 		}
 	}
+
+	async reboot(): Promise<boolean> {
+		try {
+			await this.client.post('/api/system/restart');
+			return true;
+		} catch (error) {
+			logClient(`Failed to reboot ${this.ip}: ${error}`);
+			return false;
+		}
+	}
 }

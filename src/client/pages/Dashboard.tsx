@@ -585,6 +585,27 @@ export default function Dashboard() {
 		}
 	};
 
+	const handleRestartStabilizer = async () => {
+		const confirmed = await showConfirm(
+			'Restart Stabilizer',
+			'This will completely restart the stabilizer with default settings. Continue?'
+		);
+		if (confirmed) {
+			sendControl({ action: 'restartStabilizer' });
+			setTimeout(fetchStatus, 500);
+		}
+	};
+
+	const handleResetBitaxe = async () => {
+		const confirmed = await showConfirm(
+			'Reset Bitaxe',
+			'This will reboot the Bitaxe device. Continue?'
+		);
+		if (confirmed) {
+			sendControl({ action: 'resetBitaxe' });
+		}
+	};
+
 	const isValueChanged = (formValue: number, storedValue: number | undefined) => {
 		if (storedValue === undefined) return false;
 		return formValue !== storedValue;
@@ -883,6 +904,22 @@ export default function Dashboard() {
 								>
 									<Trash2 className="w-4 h-4" />
 									Clear Historical Data
+								</button>
+								<button
+									onClick={handleRestartStabilizer}
+									disabled={dataUnavailable}
+									className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<RefreshCw className="w-4 h-4" />
+									Restart Stabilizer
+								</button>
+								<button
+									onClick={handleResetBitaxe}
+									disabled={dataUnavailable}
+									className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<RefreshCw className="w-4 h-4" />
+									Reset Bitaxe
 								</button>
 							</div>
 						</div>

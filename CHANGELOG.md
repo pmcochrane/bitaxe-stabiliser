@@ -2,6 +2,9 @@
 
 ## Version 1.4.10 Changelog
 
+- Added a restart button to allow complete restart of the stabiliser from the UI.
+- Added a reset bitaxe button to the UI.
+
 ## Version 1.4.9 Changelog
 
 - Rework the history page to try and make it more memory efficient

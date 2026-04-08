@@ -207,10 +207,11 @@ async function initializeSettings() {
 async function main() {
 	const settings = await initializeSettings();
 	const voltages = store.getVoltages();
+	voltages.length = 0;
 	logIndex(`Autotune core voltage: ${AUTOTUNE_COREVOLTAGE ? 'enabled' : 'disabled'}`);
 	logIndex(`Max core voltage: ${MAX_COREVOLTAGE}mV`);
 	logIndex(`Min core voltage: ${settings.minCoreVoltage}mV`);
-	logIndex(`Loaded ${voltages.length} voltage entries from voltages.json`);
+	logIndex(`Cleared cached voltages - will build fresh during operation`);
 	const monitor = new MonitorService(settings, store, {
 		autotuneEnabled: AUTOTUNE_COREVOLTAGE,
 		maxCoreVoltage: MAX_COREVOLTAGE,

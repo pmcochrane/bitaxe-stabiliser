@@ -74,7 +74,7 @@ export interface HistoryResponse {
 }
 
 export interface ControlCommand {
-	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'resetData' | 'resetAll';
+	action: 'start' | 'stop' | 'stabiliseOn' | 'stabiliseOff' | 'adjustFreq' | 'adjustVoltage' | 'resetData' | 'resetAll' | 'restartStabilizer' | 'resetBitaxe';
 	value?: number;
 }
 

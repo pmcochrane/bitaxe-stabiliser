@@ -198,13 +198,13 @@ export class MonitorService {
 		return this.client;
 	}
 
-	start(): void {
+	start(skipFirstApply = false): void {
 		if (this.state.running) return;
 
 		this.state.running = true;
 		this.state.stabilityStatus = this.state.stabilise ? 'stabilising' : 'inactive';
 		this.changeMessage = 'Starting monitor service...';
-		this.applyChange = true;
+		this.applyChange = !skipFirstApply;
 		this.state.stepDown = this.settings.stepDownDefault ?? -10;
 		this.autotuneSettleDelayCounter = 0;
 		this.autotuneStableCount = 0;
@@ -229,6 +229,16 @@ export class MonitorService {
 	async resetToDefaults(): Promise<void> {
 		this.logMon(`Resetting Bitaxe to defaults: ${this.settings.maxFreq}MHz @ ${this.settings.coreVoltage}mV`);
 		await this.client.setSystemSettings(this.settings.maxFreq, this.settings.coreVoltage);
+	}
+
+	async resetBitaxe(): Promise<void> {
+		this.logMon('[UI] Rebooting Bitaxe device...');
+		this.stop();
+		await this.client.reboot();
+		this.logMon('[UI] Bitaxe rebooting - waiting 10 seconds...');
+		await new Promise(resolve => setTimeout(resolve, 10000));
+		this.logMon('[UI] Restarting monitor after Bitaxe reboot');
+		this.start();
 	}
 
 	private logMon(message: string, continueLine?: boolean): void {
@@ -273,6 +283,91 @@ export class MonitorService {
 			message: `Stepdown adjusted by ${delta}: ${this.changeMessage}`,
 			timestamp: new Date().toISOString(),
 		});
+	}
+
+	async restartStabilizer(): Promise<void> {
+		this.logMon('[UI] Restarting stabilizer...');
+		this.stop();
+
+		this.state.running = false;
+		this.state.stabilityStatus = 'inactive';
+		this.state.stepDown = this.settings.stepDownDefault ?? -10;
+		this.state.stepUpCounter = 0;
+		this.state.stepDownCounter = 0;
+		this.state.lastFrequencyApplied = 0;
+		this.state.lastCoreVoltageApplied = 0;
+		this.state.drasticMeasureCounter = 0;
+		this.state.stepDownSettleCounter = 0;
+		this.state.changeFrequencyMode = false;
+		this.state.changeFrequencyDirection = 'up';
+		this.state.preFrequencyChangeToExpected = 0;
+		this.state.preFrequencyChangeHashRate = 0;
+		this.state.preFrequencyChangeStepDown = 0;
+
+		this.loopStartTime = 0;
+		this.iteration = 0;
+		this.changeMessage = '';
+
+		this.asicTemps = [];
+		this.vrTemps = [];
+		this.voltages = [];
+		this.powers = [];
+		this.hashRates = [];
+		this.stableHashRates = [];
+
+		this.minHashRate = 1000000000;
+		this.maxHashRate = 0;
+		this.overallAverageHashRate = 0;
+		this.stableAverageHashRate = 0;
+		this.overallAverageAsicTemp = 0;
+		this.overallAverageVrTemp = 0;
+		this.overallAverageVoltage = 0;
+		this.overallAveragePower = 0;
+		this.expectedHashRate = 0;
+		this.desiredFreq = 0;
+
+		this.autotuneEnabled = true;
+		this.autotuneIncreasedVoltageCounter = 0;
+		this.autotuneStableCount = 0;
+		this.autotuneSettleDelayCounter = this.autotuneVoltageEveryXcycles;
+		this.autotunePreventIncreaseDelayCounter = this.autotuneVoltageEveryXcycles * 3;
+		this.autotunePreventDecreaseDelayCounter = 0;
+
+		this.appliedCoreVoltage = 0;
+		this.currentTunedVoltage = null;
+
+		this.voltageBeforeTest = 0;
+		this.voltageTestHashRates = [];
+		this.voltageTestActive = false;
+		this.voltageInstabilitySteppedDown = false;
+		this.voltageInstabilityStepDownBase = null;
+		this.voltageInstabilityRecoverDelay = 0;
+
+		this.voltageMap.clear();
+		this.baselineVoltages.clear();
+		this.store.clearHistory();
+
+		const storeSettings = this.store.getSettings();
+		const targetFreq = storeSettings.maxFreq;
+		const targetVoltage = storeSettings.coreVoltage;
+
+		this.settings.maxFreq = targetFreq;
+		this.settings.coreVoltage = targetVoltage;
+
+		try {
+			await this.client.setSystemSettings(targetFreq, targetVoltage);
+			this.logMon(`[UI] Applied settings from store: ${targetFreq}MHz @ ${targetVoltage}mV`);
+		} catch (error) {
+			this.logMon(`[ERROR] Failed to apply settings: ${error}`);
+		}
+
+		this.store.addEvent({
+			type: 'reset',
+			message: 'Stabilizer restarted',
+			timestamp: new Date().toISOString(),
+		});
+
+		this.start(true);
 	}
 
 	resetData(): void {
